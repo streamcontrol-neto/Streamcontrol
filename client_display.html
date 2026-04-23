@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>StreamControl — ממשק לקוח</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+:root{
+  --bg:#0a0a0f;--sur:#12121a;--bdr:#1e1e2e;
+  --green:#3fb950;--blue:#58a6ff;--txt:#e6edf3;--muted:#7d8590;
+  --ui:'Heebo',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--ui);user-select:none}
+
+/* BG */
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 30% 20%,rgba(63,185,80,.06) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 70% 80%,rgba(88,166,255,.05) 0%,transparent 60%);
+  pointer-events:none}
+
+/* LAYOUT */
+.screen{display:flex;flex-direction:column;height:100%;padding:28px 32px;gap:20px}
+
+/* NOW PLAYING */
+.now-playing{background:var(--sur);border:1px solid var(--bdr);border-radius:20px;
+  padding:22px 28px;display:flex;align-items:center;gap:20px;flex-shrink:0}
+.np-wave{display:flex;align-items:center;gap:4px;height:40px}
+.np-wave span{width:5px;border-radius:5px;background:var(--green);animation:wave 1.2s ease-in-out infinite}
+.np-wave span:nth-child(1){animation-delay:.0s;height:30%}
+.np-wave span:nth-child(2){animation-delay:.1s;height:90%}
+.np-wave span:nth-child(3){animation-delay:.2s;height:50%}
+.np-wave span:nth-child(4){animation-delay:.3s;height:100%}
+.np-wave span:nth-child(5){animation-delay:.4s;height:60%}
+.np-wave span:nth-child(6){animation-delay:.5s;height:80%}
+.np-wave span:nth-child(7){animation-delay:.6s;height:40%}
+@keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+.np-wave.paused span{animation:none;height:4px}
+.np-info{flex:1;min-width:0}
+.np-label{font-size:13px;color:var(--green);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}
+.np-track{font-size:22px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-genre{font-size:14px;color:var(--muted);margin-top:4px}
+.np-right{display:flex;flex-direction:column;align-items:center;gap:10px}
+.admin-badge{font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);
+  border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;white-space:nowrap}
+
+/* CONTROLS */
+.controls{display:flex;align-items:center;justify-content:center;gap:16px;flex-shrink:0}
+.ctrl-btn{width:70px;height:70px;border-radius:50%;border:2px solid var(--bdr);
+  background:var(--sur);color:var(--txt);font-size:26px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.ctrl-btn:hover,.ctrl-btn:active{border-color:var(--green);color:var(--green);transform:scale(1.08)}
+.ctrl-btn.play{width:90px;height:90px;font-size:34px;background:var(--green);
+  border-color:var(--green);color:#000;box-shadow:0 0 30px rgba(63,185,80,.35)}
+.ctrl-btn.play:hover{background:#45d457;transform:scale(1.06)}
+
+/* VOL */
+.vol-row{display:flex;align-items:center;gap:14px;justify-content:center;flex-shrink:0}
+.vol-label{font-size:22px}
+.vol-slider{-webkit-appearance:none;width:300px;height:8px;border-radius:8px;
+  background:var(--bdr);outline:none;cursor:pointer}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;
+  border-radius:50%;background:var(--green);cursor:pointer;box-shadow:0 0 10px rgba(63,185,80,.4)}
+.vol-val{font-size:16px;color:var(--muted);font-weight:700;min-width:44px;text-align:center}
+
+/* GENRES GRID */
+.genres-section{flex:1;display:flex;flex-direction:column;min-height:0}
+.genres-title{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:14px;text-align:center}
+.genres-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:14px;overflow-y:auto;padding-bottom:4px}
+.genres-grid::-webkit-scrollbar{width:4px}
+.genres-grid::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+
+.genre-btn{background:var(--sur);border:2px solid var(--bdr);border-radius:18px;
+  padding:20px 16px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;
+  align-items:center;gap:10px;position:relative;overflow:hidden}
+.genre-btn::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s}
+.genre-btn:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.genre-btn:active{transform:translateY(0) scale(.97)}
+.genre-btn.active{border-width:3px}
+.genre-btn.active::before{opacity:.08}
+.genre-btn.inactive{opacity:.45;filter:grayscale(.6)}
+
+.genre-icon{font-size:42px;line-height:1}
+.genre-name{font-size:16px;font-weight:800;text-align:center}
+.genre-tracks{font-size:11px;color:var(--muted);font-weight:600}
+.genre-active-badge{position:absolute;top:10px;left:10px;
+  background:var(--green);color:#000;font-size:10px;font-weight:900;
+  padding:2px 7px;border-radius:10px;letter-spacing:.5px}
+
+/* MULTI-GENRE INFO */
+.mix-info{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);
+  border-radius:10px;padding:10px 16px;text-align:center;font-size:13px;
+  color:var(--green);font-weight:700;flex-shrink:0;display:none}
+.mix-info.show{display:block}
+
+/* ADMIN OVERRIDE BANNER */
+.admin-override{position:fixed;top:0;left:0;right:0;background:rgba(248,81,73,.12);
+  border-bottom:2px solid rgba(248,81,73,.4);padding:10px 20px;
+  font-size:13px;color:#f85149;font-weight:700;text-align:center;
+  display:none;z-index:100}
+.admin-override.show{display:block}
+
+/* PROGRESS BAR */
+.track-progress{width:100%;height:4px;background:var(--bdr);border-radius:4px;
+  overflow:hidden;flex-shrink:0}
+.track-progress-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));
+  border-radius:4px;width:0%;transition:width .5s linear}
+</style>
+</head>
+<body>
+
+<div class="admin-override" id="adminBanner">
+  📡 מנהל המערכת הפעיל שינוי מרחוק
+</div>
+
+<div class="screen">
+
+  <!-- NOW PLAYING -->
+  <div class="now-playing">
+    <div class="np-wave" id="npWave">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="np-info">
+      <div class="np-label">▶ מנגן עכשיו</div>
+      <div class="np-track" id="npTrack">Bach - Cello Suite No.1</div>
+      <div class="np-genre" id="npGenre">🎹 קלאסי</div>
+    </div>
+    <div class="np-right">
+      <div class="admin-badge">מנוהל מרחוק ✓</div>
+    </div>
+  </div>
+
+  <!-- TRACK PROGRESS -->
+  <div class="track-progress">
+    <div class="track-progress-fill" id="trackFill"></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="ctrl-btn" onclick="prevTrack()" title="קודם">⏮</button>
+    <button class="ctrl-btn" onclick="togglePlay()" id="playBtn" title="נגן/עצור">
+      <span id="playIcon">⏸</span>
+    </button>
+    <button class="ctrl-btn play" onclick="nextTrack()" style="width:70px;height:70px;font-size:26px;background:var(--sur);border-color:var(--bdr);color:var(--txt)" title="הבא">⏭</button>
+    <button class="ctrl-btn" onclick="shuffleNow()" title="ערבוב">🔀</button>
+  </div>
+
+  <!-- VOLUME -->
+  <div class="vol-row">
+    <span class="vol-label">🔇</span>
+    <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="70" oninput="setVol(this.value)">
+    <span class="vol-label">🔊</span>
+    <span class="vol-val" id="volVal">70%</span>
+  </div>
+
+  <!-- MIX INFO -->
+  <div class="mix-info" id="mixInfo">🎵 מנגן מיקס של כמה ז'אנרים — Shuffle אוטומטי</div>
+
+  <!-- GENRES -->
+  <div class="genres-section">
+    <div class="genres-title">בחר ז'אנר להשמעה</div>
+    <div class="genres-grid" id="genresGrid"></div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════
+// GENRE DEFINITIONS (כל 20 ז'אנרים)
+// ══════════════════════════════════════
+const ALL_GENRES = [
+  {id:'classical',  name:'קלאסי',     icon:'🎹', color:'#a78bfa', tracks:420},
+  {id:'jazz',       name:'ג׳אז',       icon:'🎷', color:'#f59e0b', tracks:380},
+  {id:'swing',      name:'סווינג',     icon:'🎺', color:'#f97316', tracks:220},
+  {id:'blues',      name:'בלוז',       icon:'🎸', color:'#3b82f6', tracks:290},
+  {id:'rock',       name:'רוק',        icon:'🤘', color:'#ef4444', tracks:510},
+  {id:'pop',        name:'פופ',        icon:'🎤', color:'#ec4899', tracks:640},
+  {id:'house',      name:'האוס',       icon:'🏠', color:'#8b5cf6', tracks:350},
+  {id:'trance',     name:'טראנס',      icon:'🌀', color:'#06b6d4', tracks:310},
+  {id:'techno',     name:'טכנו',       icon:'🔊', color:'#64748b', tracks:280},
+  {id:'chill',      name:'צ׳יל אאוט', icon:'😌', color:'#10b981', tracks:390},
+  {id:'ambient',    name:'אמביאנט',    icon:'🌊', color:'#0ea5e9', tracks:260},
+  {id:'lounge',     name:'לאונג׳',     icon:'🛋️', color:'#d97706', tracks:330},
+  {id:'latin',      name:'לטיני',      icon:'💃', color:'#dc2626', tracks:270},
+  {id:'reggae',     name:'רגאיי',      icon:'🌴', color:'#16a34a', tracks:190},
+  {id:'soul',       name:'סול',        icon:'❤️', color:'#e11d48', tracks:240},
+  {id:'funk',       name:'פאנק',       icon:'🕺', color:'#7c3aed', tracks:210},
+  {id:'rnb',        name:'R&B',        icon:'🎶', color:'#9333ea', tracks:360},
+  {id:'acoustic',   name:'אקוסטי',     icon:'🎵', color:'#78716c', tracks:300},
+  {id:'world',      name:'מוזיקת עולם',icon:'🌍', color:'#0d9488', tracks:180},
+  {id:'meditation', name:'מדיטציה',    icon:'🧘', color:'#6366f1', tracks:150},
+];
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+const STATE = {
+  // ערוצים שפתוחים ללקוח זה (מגיע מ-Firebase)
+  allowedGenres: ['classical','jazz','house','chill','lounge','ambient'],
+  // ערוצים פעילים כרגע (הלקוח בחר)
+  activeGenres: ['classical'],
+  isPlaying: true,
+  volume: 70,
+  trackPct: 0,
+  // Firebase config (ממולא ע"י הנגן)
+  firebaseUrl: '',
+  firebaseSecret: '',
+  deviceId: '',
+  localOverride: false, // האם הלקוח בחר בעצמו
+};
+
+const DEMO_TRACKS = {
+  classical:  ['Bach - Cello Suite No.1','Vivaldi - Four Seasons','Mozart - Symphony No.40','Beethoven - Moonlight Sonata'],
+  jazz:       ['Miles Davis - So What','John Coltrane - Blue Train','Dave Brubeck - Take Five','Bill Evans - Waltz for Debby'],
+  house:      ['Classic House Mix Vol.1','Deep House Session','Chicago House Classics','Future House Vibes'],
+  chill:      ['Cafe Del Mar Vol.1','Ibiza Sunset Chill','Lounge Therapy','Buddha Bar Mix'],
+  lounge:     ['Hotel Costes Vol.3','Cafe Costes Lounge','Paris Lounge Session','Elegant Lounge Mix'],
+  ambient:    ['Brian Eno - Music for Airports','Ambient Textures Vol.2','Deep Space Ambient','Morning Meditation'],
+  swing:      ['Benny Goodman - Sing Sing Sing','Glenn Miller - In The Mood','Duke Ellington - Take the A Train'],
+  blues:      ['B.B. King - The Thrill Is Gone','Muddy Waters - Hoochie Coochie Man','Robert Johnson - Cross Road Blues'],
+  rock:       ['Led Zeppelin - Stairway to Heaven','Pink Floyd - Comfortably Numb','The Beatles - Hey Jude'],
+  pop:        ['Michael Jackson - Thriller','Queen - Bohemian Rhapsody','Elton John - Tiny Dancer'],
+  trance:     ['Ferry Corsten - Punk','Armin van Buuren - Blah Blah Blah','Tiësto - Traffic'],
+  techno:     ['Kraftwerk - Autobahn','Jeff Mills - The Bells','Carl Cox - I Want You'],
+  latin:      ['Buena Vista Social Club','Santana - Oye Como Va','Celia Cruz - La Vida Es Un Carnaval'],
+  reggae:     ['Bob Marley - No Woman No Cry','Peter Tosh - Legalize It','Jimmy Cliff - The Harder They Come'],
+  soul:       ['Aretha Franklin - Respect','Otis Redding - Sittin On The Dock','Marvin Gaye - What's Going On'],
+  funk:       ['James Brown - Get Up','Sly & Family Stone - Thank You','Parliament - Give Up The Funk'],
+  rnb:        ['Alicia Keys - If I Ain't Got You','John Legend - All Of Me','Beyoncé - Crazy In Love'],
+  acoustic:   ['Norah Jones - Come Away With Me','Jack Johnson - Better Together','John Mayer - Gravity'],
+  world:      ['Youssou N'Dour - 7 Seconds','Cesária Évora - Sodade','Enya - Orinoco Flow'],
+  meditation: ['Om Meditation 432Hz','Tibetan Singing Bowls','Nature Sounds & Ambient'],
+};
+
+let currentTrackIndex = 0;
+let progressTimer = null;
+
+// ══════════════════════════════════════
+// FIREBASE
+// ══════════════════════════════════════
+async function fbPatch(path, data) {
+  if (!STATE.firebaseUrl) return;
+  try {
+    await fetch(`${STATE.firebaseUrl}/${path}.json?auth=${STATE.firebaseSecret}`, {
+      method: 'PATCH', body: JSON.stringify(data)
+    });
+  } catch(e) {}
+}
+
+async function fbGet(path) {
+  if (!STATE.firebaseUrl) return null;
+  try {
+    const r = await fetch(`${STATE.firebaseUrl}/${path}.json?auth=${STATE.firebaseSecret}`);
+    return r.ok ? r.json() : null;
+  } catch(e) { return null; }
+}
+
+// ══════════════════════════════════════
+// RENDER GENRES
+// ══════════════════════════════════════
+function renderGenres() {
+  const grid = document.getElementById('genresGrid');
+  const allowed = ALL_GENRES.filter(g => STATE.allowedGenres.includes(g.id));
+
+  grid.innerHTML = allowed.map(g => {
+    const isActive = STATE.activeGenres.includes(g.id);
+    return `<div class="genre-btn ${isActive ? 'active' : 'inactive'}"
+      style="${isActive ? `border-color:${g.color};box-shadow:0 0 20px ${g.color}22` : ''}"
+      onclick="toggleGenre('${g.id}')"
+    >
+      ${isActive ? '<div class="genre-active-badge">פועל ✓</div>' : ''}
+      <div style="position:absolute;inset:0;background:${g.color};opacity:${isActive?.08:.02};pointer-events:none;border-radius:16px"></div>
+      <div class="genre-icon">${g.icon}</div>
+      <div class="genre-name" style="${isActive ? `color:${g.color}` : ''}">${g.name}</div>
+      <div class="genre-tracks">${g.tracks.toLocaleString()} שירים</div>
+    </div>`;
+  }).join('');
+
+  // MIX INFO
+  const mixInfo = document.getElementById('mixInfo');
+  if (STATE.activeGenres.length > 1) {
+    const names = STATE.activeGenres.map(id => ALL_GENRES.find(g=>g.id===id)?.name).filter(Boolean);
+    mixInfo.textContent = `🎵 מיקס: ${names.join(' + ')} — Shuffle אוטומטי`;
+    mixInfo.classList.add('show');
+  } else {
+    mixInfo.classList.remove('show');
+  }
+}
+
+// ══════════════════════════════════════
+// TOGGLE GENRE
+// ══════════════════════════════════════
+function toggleGenre(id) {
+  const idx = STATE.activeGenres.indexOf(id);
+  if (idx === -1) {
+    STATE.activeGenres.push(id);
+  } else {
+    if (STATE.activeGenres.length === 1) return; // מינימום אחד
+    STATE.activeGenres.splice(idx, 1);
+  }
+  STATE.localOverride = true;
+  renderGenres();
+  updateNowPlaying();
+  reportToAdmin();
+}
+
+// ══════════════════════════════════════
+// NOW PLAYING
+// ══════════════════════════════════════
+function updateNowPlaying() {
+  // בחר ז'אנר רנדומלי מהפעילים
+  const activeId = STATE.activeGenres[Math.floor(Math.random() * STATE.activeGenres.length)];
+  const genre = ALL_GENRES.find(g => g.id === activeId);
+  const tracks = DEMO_TRACKS[activeId] || ['טוען...'];
+  const track = tracks[Math.floor(Math.random() * tracks.length)];
+
+  document.getElementById('npTrack').textContent = track;
+  document.getElementById('npGenre').textContent = `${genre?.icon || '🎵'} ${genre?.name || ''}`;
+
+  resetProgress();
+}
+
+function resetProgress() {
+  STATE.trackPct = 0;
+  clearInterval(progressTimer);
+  if (STATE.isPlaying) startProgress();
+}
+
+function startProgress() {
+  const dur = 240 + Math.random() * 180; // 4-7 דקות
+  const step = 100 / (dur * 2);
+  progressTimer = setInterval(() => {
+    STATE.trackPct = Math.min(STATE.trackPct + step, 100);
+    document.getElementById('trackFill').style.width = STATE.trackPct + '%';
+    if (STATE.trackPct >= 100) {
+      nextTrack();
+    }
+  }, 500);
+}
+
+// ══════════════════════════════════════
+// PLAYER CONTROLS
+// ══════════════════════════════════════
+function togglePlay() {
+  STATE.isPlaying = !STATE.isPlaying;
+  const icon = document.getElementById('playIcon');
+  const wave = document.getElementById('npWave');
+  const btn  = document.getElementById('playBtn');
+
+  icon.textContent = STATE.isPlaying ? '⏸' : '▶';
+  btn.style.background = STATE.isPlaying ? 'var(--green)' : 'var(--sur)';
+  btn.style.color = STATE.isPlaying ? '#000' : 'var(--txt)';
+  btn.style.borderColor = STATE.isPlaying ? 'var(--green)' : 'var(--bdr)';
+  wave.classList.toggle('paused', !STATE.isPlaying);
+
+  if (STATE.isPlaying) startProgress();
+  else clearInterval(progressTimer);
+
+  reportToAdmin();
+}
+
+function nextTrack() {
+  updateNowPlaying();
+  reportToAdmin();
+}
+
+function prevTrack() {
+  STATE.trackPct = 0;
+  updateNowPlaying();
+  reportToAdmin();
+}
+
+function shuffleNow() {
+  // ערבב את הז'אנרים הפעילים
+  updateNowPlaying();
+  showFeedback('🔀 ערבוב!');
+}
+
+function setVol(val) {
+  STATE.volume = parseInt(val);
+  document.getElementById('volVal').textContent = val + '%';
+  reportToAdmin();
+}
+
+// ══════════════════════════════════════
+// REPORT TO ADMIN
+// ══════════════════════════════════════
+function reportToAdmin() {
+  fbPatch(`devices/${STATE.deviceId}`, {
+    activeGenres: STATE.activeGenres,
+    isPlaying: STATE.isPlaying,
+    volume: STATE.volume,
+    localOverride: STATE.localOverride,
+    currentTrack: document.getElementById('npTrack').textContent,
+    lastClientAction: new Date().toLocaleTimeString('he-IL'),
+  });
+}
+
+// ══════════════════════════════════════
+// LISTEN FOR ADMIN COMMANDS
+// ══════════════════════════════════════
+let lastCmdTs = 0;
+async function pollAdminCommands() {
+  const cmd = await fbGet(`commands/${STATE.deviceId}`);
+  if (!cmd || cmd.timestamp <= lastCmdTs) return;
+  lastCmdTs = cmd.timestamp;
+
+  const banner = document.getElementById('adminBanner');
+  banner.classList.add('show');
+  setTimeout(() => banner.classList.remove('show'), 4000);
+
+  switch(cmd.action) {
+    case 'play':
+      if (!STATE.isPlaying) togglePlay();
+      break;
+    case 'stop':
+    case 'pause':
+      if (STATE.isPlaying) togglePlay();
+      break;
+    case 'next':
+      nextTrack();
+      break;
+    case 'volume':
+      STATE.volume = cmd.value;
+      document.getElementById('volSlider').value = cmd.value;
+      document.getElementById('volVal').textContent = cmd.value + '%';
+      break;
+    case 'set_genres':
+      // מנהל קובע ז'אנרים מרחוק — דורס את בחירת הלקוח
+      if (cmd.allowedGenres) STATE.allowedGenres = cmd.allowedGenres;
+      if (cmd.activeGenres)  STATE.activeGenres  = cmd.activeGenres;
+      STATE.localOverride = false;
+      renderGenres();
+      updateNowPlaying();
+      break;
+    case 'open_genre':
+      if (!STATE.allowedGenres.includes(cmd.genreId)) {
+        STATE.allowedGenres.push(cmd.genreId);
+        renderGenres();
+      }
+      break;
+    case 'close_genre':
+      STATE.allowedGenres = STATE.allowedGenres.filter(g => g !== cmd.genreId);
+      STATE.activeGenres  = STATE.activeGenres.filter(g => g !== cmd.genreId);
+      if (STATE.activeGenres.length === 0) STATE.activeGenres = [STATE.allowedGenres[0]];
+      renderGenres();
+      updateNowPlaying();
+      break;
+  }
+}
+
+// ══════════════════════════════════════
+// VISUAL FEEDBACK
+// ══════════════════════════════════════
+function showFeedback(msg) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  Object.assign(el.style, {
+    position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
+    background:'rgba(63,185,80,.9)',color:'#000',padding:'16px 32px',
+    borderRadius:'16px',fontSize:'24px',fontWeight:'900',zIndex:'9999',
+    pointerEvents:'none',transition:'opacity .5s',
+  });
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(),500); }, 1000);
+}
+
+// ══════════════════════════════════════
+// LOAD CONFIG FROM STREAMER
+// ══════════════════════════════════════
+async function loadConfig() {
+  try {
+    // הנגן מייצא config דרך HTTP מקומי
+    const r = await fetch('http://localhost:8765/config');
+    if (r.ok) {
+      const cfg = await r.json();
+      STATE.firebaseUrl    = cfg.firebase_url    || '';
+      STATE.firebaseSecret = cfg.firebase_secret || '';
+      STATE.deviceId       = cfg.device_id       || '';
+      // ז'אנרים פתוחים ללקוח
+      if (cfg.allowed_genres) STATE.allowedGenres = cfg.allowed_genres;
+      if (cfg.active_genres)  STATE.activeGenres  = cfg.active_genres;
+      if (cfg.volume)         {
+        STATE.volume = cfg.volume;
+        document.getElementById('volSlider').value = cfg.volume;
+        document.getElementById('volVal').textContent = cfg.volume + '%';
+      }
+    }
+  } catch(e) {
+    // מצב דמו — ללא שרת מקומי
+    console.log('Demo mode');
+  }
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+window.onload = async () => {
+  await loadConfig();
+  renderGenres();
+  updateNowPlaying();
+  startProgress();
+  // poll פקודות מרחוק כל 3 שניות
+  setInterval(pollAdminCommands, 3000);
+};
+
+// מניעת zoom וגלילה ב-Kiosk
+document.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+document.addEventListener('keydown', e => {
+  if(e.key === 'F5' || (e.ctrlKey && e.key==='r')) e.preventDefault();
+});
+</script>
+</body>
+</html>
