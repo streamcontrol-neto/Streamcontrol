@@ -12,17 +12,14 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-REPO="https://raw.githubusercontent.com/YOUR_USERNAME/streamcontrol/main"
-INSTALL_DIR="$HOME/streamcontrol"
-FIREBASE_URL="https://YOUR_PROJECT.firebaseio.com"
-FIREBASE_SECRET="YOUR_FIREBASE_SECRET"
-R2_ACCOUNT_ID="YOUR_R2_ACCOUNT_ID"
+REPO="https://raw.githubusercontent.com/streamcontrol-neto/Streamcontrol/main"
+FIREBASE_URL="https://streamcontrol-ccf25-default-rtdb.firebaseio.com"
+FIREBASE_SECRET="vPKcWt16ps81b2ZW7QWkN65hTDdBUFAvWhU5MEtG"
+R2_ACCOUNT_ID="19431862961117bd84719b0ac5954da2"
 R2_BUCKET="streamcontrol-music"
-R2_ACCESS_KEY="YOUR_R2_ACCESS_KEY"
-R2_SECRET_KEY="YOUR_R2_SECRET_KEY"
-R2_PUBLIC_URL="https://YOUR_PUBLIC_URL.r2.dev"
-VERSION="1.0.0"
-
+R2_ACCESS_KEY="51bf3e8eb7053b74151a22dd30b4614c"
+R2_SECRET_KEY="18c525107d96a15b41998c7e15d7006ba14749b89394594fabda9c51f234dc08"
+R2_PUBLIC_URL="https://pub-5dd0126225ae4eaf98d001530cf45f93.r2.dev"
 echo ""
 echo "${BLUE}╔════════════════════════════════════════╗${NC}"
 echo "${BLUE}║     StreamControl — התקנה אוטומטית    ║${NC}"
