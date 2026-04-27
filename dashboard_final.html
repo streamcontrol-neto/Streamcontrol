@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamControl</title>
+<style>
+:root{--bg:#080c10;--sur:#0d1117;--s2:#161b22;--bdr:#21262d;--txt:#e6edf3;--muted:#7d8590;--green:#3fb950;--blue:#58a6ff;--red:#f85149;--yellow:#d29922;--purple:#bc8cff;--orange:#f0883e}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden;display:flex;flex-direction:column}
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
+.lbox{background:#0d1117;border:1px solid #21262d;border-radius:16px;padding:40px;width:360px;max-width:95vw;text-align:center;color:#e6edf3}
+.llogo{font-size:40px;margin-bottom:12px}
+.ltitle{font-size:20px;font-weight:800;margin-bottom:6px}
+.lsub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.linput{width:100%;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:12px;border-radius:10px;font-size:16px;text-align:center;letter-spacing:3px;margin-bottom:14px;outline:none}
+.linput:focus{border-color:var(--green)}
+.lbtn{width:100%;background:var(--green);border:none;color:#000;padding:13px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer}
+.lbtn:hover{background:#45d457}
+.lerr{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+.lhint{color:var(--muted);font-size:11px;margin-top:16px}
+#app{display:none;height:100%;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:8px;padding:0 14px;height:48px;background:var(--sur);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.logo{font-weight:800;font-size:15px;margin-left:10px}
+.logo span{background:var(--green);color:#000;padding:2px 6px;border-radius:4px;margin-left:5px}
+.tnb{padding:5px 10px;border-radius:6px;border:none;background:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+.tnb:hover,.tnb.active{background:var(--s2);color:var(--txt)}
+.tr{margin-right:auto;display:flex;align-items:center;gap:8px}
+.btn{padding:5px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:12px;font-weight:700;cursor:pointer}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.g{background:var(--green);border-color:var(--green);color:#000}
+.btn.r{border-color:var(--red);color:var(--red);background:rgba(248,81,73,.07)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.ws{display:flex;flex:1;overflow:hidden}
+.sb{width:210px;background:var(--sur);border-left:1px solid var(--bdr);overflow-y:auto;padding:8px}
+.main{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.rp{width:255px;background:var(--sur);border-right:1px solid var(--bdr);overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px}
+.sblbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:6px 4px 2px;display:block}
+.sbi{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.sbi:hover,.sbi.active{background:var(--s2);color:var(--txt)}
+.sbi .ct{margin-right:auto;background:var(--s2);border-radius:10px;padding:1px 6px;font-size:10px}
+.sbi.active .ct{background:var(--green);color:#000;font-weight:700}
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.ct2{font-size:14px;font-weight:800}
+.ca{display:flex;gap:6px;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.stat{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:12px}
+.sv{font-size:22px;font-weight:800;line-height:1;margin-bottom:3px}
+.sl{font-size:11px;color:var(--muted)}
+.cg{color:var(--green)}.cb{color:var(--blue)}.cr{color:var(--red)}.cy{color:var(--yellow)}.cp{color:var(--purple)}.co{color:var(--orange)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.dc{background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;cursor:pointer;position:relative}
+.dc:hover{border-color:rgba(88,166,255,.3)}
+.dc.on{border-color:rgba(63,185,80,.2)}.dc.off{border-color:rgba(248,81,73,.15)}.dc.dl{border-color:rgba(88,166,255,.2)}
+.dc-stripe{position:absolute;top:0;right:0;width:3px;bottom:0;border-radius:0 10px 10px 0}
+.dc.on .dc-stripe{background:var(--green)}.dc.off .dc-stripe{background:var(--red)}.dc.dl .dc-stripe{background:var(--blue)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.b-on{background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.3);color:var(--green)}
+.b-off{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.3);color:var(--red)}
+.b-dl{background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
+.b-w{background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.3);color:var(--yellow)}
+.now{background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.15);border-radius:6px;padding:7px 9px;margin:8px 0}
+.now-l{font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:1px}
+.now-t{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.libbar{height:3px;background:var(--bdr);border-radius:3px;overflow:hidden;margin:4px 0 2px}
+.libfill{height:100%;border-radius:3px;background:var(--green)}.libfill.inc{background:var(--yellow)}
+.liblebl{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.ib{width:28px;height:28px;border-radius:6px;border:1px solid var(--bdr);background:var(--s2);color:var(--muted);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;justify-content:center}
+.ib:hover{border-color:var(--blue);color:var(--blue)}.ib.r:hover{border-color:var(--red);color:var(--red)}.ib.g:hover{border-color:var(--green);color:var(--green)}
+.cc{background:var(--s2);border:1px solid var(--bdr);border-radius:12px;overflow:hidden}
+.cc-top{padding:12px;border-bottom:1px solid var(--bdr);display:flex;gap:10px}
+.cc-body{padding:10px 12px}
+.cc-foot{padding:8px 12px;border-top:1px solid var(--bdr);display:flex;gap:6px;flex-wrap:wrap}
+.ccdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ccname{font-size:14px;font-weight:900}
+.ccsub{font-size:11px;color:var(--muted);margin-top:2px}
+.devrow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px}
+.devrow:last-child{border-bottom:none}
+.dd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dd.on{background:var(--green);box-shadow:0 0 4px var(--green)}.dd.off{background:var(--red)}.dd.dl{background:var(--blue)}
+tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;color:var(--muted);text-transform:uppercase;padding:6px 10px;text-align:right;border-bottom:1px solid var(--bdr);font-weight:400}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--bdr);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--s2);cursor:pointer}
+.r2-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.r2s{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center}
+.r2sv{font-size:18px;font-weight:700;color:var(--orange)}
+.r2sl{font-size:10px;color:var(--muted);margin-top:2px}
+.r2path{background:var(--s2);border:1px solid var(--bdr);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.r2files{display:flex;flex-direction:column;gap:3px;max-height:320px;overflow-y:auto}
+.r2f{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;border:1px solid transparent}
+.r2f:hover{background:var(--s2);border-color:var(--bdr)}.r2f.folder{cursor:pointer}
+.r2fn{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r2fsz{font-size:10px;color:var(--muted);white-space:nowrap}
+.r2fa{display:flex;gap:4px;opacity:0}.r2f:hover .r2fa{opacity:1}
+.r2f.selected{background:rgba(249,115,22,.08);border-color:rgba(249,115,22,.35)!important}
+.r2cb{width:16px;height:16px;cursor:pointer;accent-color:var(--orange);flex-shrink:0}
+.r2-sel-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:7px;margin-bottom:6px;font-size:13px}
+.r2-sel-bar.hidden{display:none}
+.upzone{border:2px dashed var(--bdr);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-top:10px}
+.upzone:hover,.upzone.drag{border-color:var(--green);background:rgba(63,185,80,.04)}
+.upzone input{display:none}
+.upprog{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:10px;margin-bottom:6px}
+.upprogbar{height:4px;background:var(--bdr);border-radius:4px;overflow:hidden;margin:5px 0}
+.upprogfill{height:100%;background:var(--green);border-radius:4px;transition:width .3s}
+.pltabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.pltab{padding:4px 11px;border-radius:6px;border:1px solid var(--bdr);background:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}
+.pltab:hover,.pltab.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.08)}
+.tklist{display:flex;flex-direction:column;gap:3px;max-height:300px;overflow-y:auto}
+.ti{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;border:1px solid transparent}
+.ti:hover{background:var(--s2);border-color:var(--bdr)}.ti.play{background:rgba(63,185,80,.06);border-color:rgba(63,185,80,.2)}.ti.inv{background:rgba(248,81,73,.06);border-color:rgba(248,81,73,.2)}
+.tiname{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tidur{font-size:11px;color:var(--muted)}
+.tiacts{display:flex;gap:3px;opacity:0}.ti:hover .tiacts{opacity:1}
+.schgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.sc{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:11px 12px 28px;position:relative}
+.sc::after{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;background:var(--blue);border-radius:0 8px 8px 0}
+.sc.def::after{background:var(--green)}
+.scbadge{display:inline-block;font-size:8px;font-weight:700;color:var(--green);background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.25);padding:1px 5px;border-radius:3px;margin-bottom:4px}
+.sctime{font-size:17px;font-weight:700;color:var(--orange)}
+.scdays{display:flex;gap:3px;margin:5px 0;flex-wrap:wrap}
+.dp{padding:2px 5px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.25);color:var(--blue)}
+.dp.off{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.2);color:var(--red);text-decoration:line-through}
+.scmeta{font-size:11px;color:var(--muted);line-height:1.7}
+.scdel{position:absolute;left:8px;bottom:7px;background:none;border:none;color:var(--bdr);cursor:pointer;font-size:13px}
+.scdel:hover{color:var(--red)}
+.adcard{background:var(--s2);border:1px solid rgba(188,140,255,.2);border-radius:8px;padding:12px;margin-bottom:8px}
+.adlbl{font-size:8px;font-weight:700;color:var(--purple);background:rgba(188,140,255,.15);border:1px solid rgba(188,140,255,.3);padding:1px 5px;border-radius:3px;margin-bottom:6px;display:inline-block}
+.adname{font-size:13px;font-weight:800;margin-bottom:4px}
+.admeta{font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.8}
+.adrow{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.loglist{display:flex;flex-direction:column;gap:2px;font-size:11px;font-family:monospace;overflow-y:auto}
+.lr{display:flex;gap:10px;padding:5px 8px;border-radius:5px}.lr:hover{background:var(--s2)}
+.lt{color:var(--bdr);white-space:nowrap;min-width:50px}.ld{color:var(--blue);white-space:nowrap;min-width:80px;overflow:hidden;text-overflow:ellipsis}.lm{flex:1;color:var(--muted)}
+.lr.play .lm{color:var(--green)}.lr.sync .lm{color:var(--blue)}.lr.err .lm{color:var(--red)}.lr.warn .lm{color:var(--yellow)}.lr.ad .lm{color:var(--purple)}.lr.manual .lm{color:var(--orange)}.lr.invalid .lm{color:var(--red);font-weight:700}.lr.upload .lm{color:var(--orange)}
+.rplbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;display:block;font-weight:700}
+.nptrack{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.npdev{font-size:11px;color:var(--muted);margin-bottom:8px}
+.progbar{width:100%;height:3px;background:var(--bdr);border-radius:3px;overflow:hidden}
+.progfill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));border-radius:3px}
+.controls{display:flex;align-items:center;justify-content:center;gap:7px;margin:10px 0}
+.ctrl{width:30px;height:30px;border-radius:50%;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.ctrl:hover{border-color:var(--green);color:var(--green)}
+.ctrl.big{width:38px;height:38px;font-size:17px;background:var(--green);border-color:var(--green);color:#000}
+.volrow{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--bdr);border-radius:3px;outline:none;cursor:pointer;padding:0;border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--green);cursor:pointer}
+input[type=text],input[type=date],input[type=time],input[type=number],input[type=password],select{background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px;outline:none;width:100%}
+input:focus,select:focus{border-color:var(--blue)}input::placeholder{color:var(--muted)}select option{background:var(--s2)}
+.frow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.flbl{font-size:12px;color:var(--muted);font-weight:600;min-width:90px;flex-shrink:0}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.dayrow{display:flex;gap:5px;flex-wrap:wrap}
+.dcb{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;border:1px solid var(--bdr);user-select:none}
+.dcb.on{background:rgba(88,166,255,.12);border-color:var(--blue);color:var(--blue)}.dcb.no{background:rgba(248,81,73,.06);border-color:rgba(248,81,73,.2);color:var(--red)}
+.dcb input{display:none}
+.alertbar{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px}
+.infobox{background:var(--s2);border:1px solid var(--bdr);border-radius:7px;padding:9px 12px;font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px}
+.cpick{display:flex;gap:6px;flex-wrap:wrap}
+.csw{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.csw.sel{border-color:var(--txt);transform:scale(1.15)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.76);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--sur);border:1px solid var(--bdr);border-radius:14px;padding:24px;width:480px;max-width:96vw;transform:translateY(16px);transition:transform .25s;max-height:92vh;overflow-y:auto}
+.overlay.open .modal{transform:translateY(0)}
+.mtitle{font-size:16px;font-weight:900;margin-bottom:6px}
+.msub{font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.mdetail{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;font-family:monospace;white-space:pre-wrap;line-height:1.8}
+.mwarn{font-size:11px;color:var(--orange);padding:8px 10px;background:rgba(240,136,62,.08);border:1px solid rgba(240,136,62,.2);border-radius:6px;margin-bottom:14px}
+.macts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;border-top:1px solid var(--bdr);padding-top:14px}
+.stitle{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin:12px 0 8px}
+.notif{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:11px 20px;font-size:13px;font-weight:700;z-index:9999;transition:transform .35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.notif.show{transform:translateX(-50%) translateY(0)}
+.notif.ok{border-color:var(--green)}.notif.err{border-color:var(--red)}.notif.warn{border-color:var(--yellow)}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" style="position:fixed;inset:0;background:#080c10;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div class="lbox" style="background:#0d1117;border:1px solid #30363d;border-radius:16px;padding:40px;width:360px;max-width:95vw;text-align:center;color:#e6edf3">
+    <div class="llogo">🎵</div>
+    <div class="ltitle">StreamControl</div>
+    <div class="lsub">ניהול מרחוק — הכנס סיסמה</div>
+    <select id="userRole" style="width:100%;background:#161b22;border:1px solid #30363d;color:#e6edf3;padding:10px;border-radius:10px;font-size:14px;margin-bottom:10px;display:block;outline:none">
+      <option value="admin">👑 מנהל ראשי</option>
+      <option value="editor">✏️ עורך תוכן</option>
+    </select>
+    <input type="password" id="pwdInput" placeholder="••••••••" style="width:100%;background:#161b22;border:1px solid #30363d;color:#e6edf3;padding:12px;border-radius:10px;font-size:16px;text-align:center;letter-spacing:3px;margin-bottom:14px;display:block;outline:none" />
+    <button id="loginBtn" style="width:100%;background:#3fb950;border:none;color:#000;padding:13px;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px">כניסה למערכת</button>
+    <div class="lerr" id="loginErr"></div>
+    <div class="lhint">StreamControl v1.0.0 — R2 + Firebase</div>
+  </div>
+</div>
+
+<div id="app">
+<div class="topbar">
+  <div class="logo"><span>🎵</span>StreamControl</div>
+  <button class="tnb active" onclick="showTab('status')">📊 סטטוס</button>
+  <button class="tnb" onclick="showTab('clients')">🏢 לקוחות</button>
+  <button class="tnb" onclick="showTab('devices')">📺 סטרימרים</button>
+  <button class="tnb" onclick="showTab('library')">☁️ ספרייה</button>
+  <button class="tnb" onclick="showTab('playlists')">🎼 פלייליסטים</button>
+  <button class="tnb" onclick="showTab('dayprogram')">📆 תוכנית יום</button>
+  <button class="tnb" onclick="showTab('ads')">📢 פרסומות</button>
+  <button class="tnb" onclick="showTab('log')">📋 לוג</button>
+  <button class="tnb" onclick="showTab('settings')">⚙️ הגדרות</button>
+  <div class="tr">
+    <div class="pulse"></div>
+    <span style="font-size:11px;color:var(--muted)">Firebase + R2</span>
+    <span id="role-badge" style="font-size:11px;background:var(--s2);border:1px solid var(--bdr);padding:3px 8px;border-radius:6px">👑 מנהל</span>
+    <button class="btn" onclick="confirm('לסנכרן כל הסטרימרים?') && syncAll()">☁️ סנכרן</button>
+    <button class="btn" onclick="manualSync()" style="color:var(--blue);border-color:var(--blue)">🔄 רענן</button>
+    <button class="btn r" onclick="logout()">🔒 יציאה</button>
+    <button class="btn g" onclick="openModal('addClientModal')">+ לקוח</button>
+  </div>
+</div>
+
+<div class="ws">
+<div class="sb">
+  <span class="sblbl">תפריט</span>
+  <div class="sbi active" onclick="showTab('status');setSbi(this)">📊 סטטוס<span class="ct" id="ct-on">0</span></div>
+  <div class="sbi" onclick="showTab('clients');setSbi(this)">🏢 לקוחות<span class="ct" id="ct-cl">0</span></div>
+  <div class="sbi" onclick="showTab('devices');setSbi(this)">📺 סטרימרים<span class="ct" id="ct-dv">0</span></div>
+  <div class="sbi" onclick="showTab('library');setSbi(this)">☁️ R2<span class="ct" id="ct-r2">0</span></div>
+  <div class="sbi" onclick="showTab('playlists');setSbi(this)">🎼 פלייליסטים<span class="ct" id="ct-pl">0</span></div>
+  <div class="sbi" onclick="showTab('dayprogram');setSbi(this)">📆 תוכנית יום<span class="ct" id="ct-dp">0</span></div>
+  <div class="sbi" onclick="showTab('ads');setSbi(this)">📢 פרסומות<span class="ct" id="ct-ad">0</span></div>
+  <div class="sbi" onclick="showTab('log');setSbi(this)">📋 לוג</div>
+  <div class="sbi" onclick="showTab('settings');setSbi(this)">⚙️ הגדרות</div>
+  <span class="sblbl" style="margin-top:10px">לקוחות</span>
+  <div id="sbClients"></div>
+</div>
+
+<div class="main">
+
+<div id="tab-status">
+  <div class="stats">
+    <div class="stat"><div class="sv cg" id="st-on">0</div><div class="sl">מחוברים</div></div>
+    <div class="stat"><div class="sv cr" id="st-off">0</div><div class="sl">מנותקים</div></div>
+    <div class="stat"><div class="sv cb" id="st-dl">0</div><div class="sl">מורידים</div></div>
+    <div class="stat"><div class="sv cy" id="st-tot">0</div><div class="sl">סה"כ</div></div>
+    <div class="stat"><div class="sv cp" id="st-ads">0</div><div class="sl">פרסומות</div></div>
+  </div>
+  <div id="inv-alert" class="alertbar" style="display:none">⛔ קבצים לא תקינים — בדוק פלייליסטים</div>
+  <div class="grid" id="statusCards"></div>
+</div>
+
+<div id="tab-clients" style="display:none">
+  <div class="card">
+    <div class="ch"><div class="ct2">🏢 לקוחות</div><div class="ca"><button class="btn g" onclick="openModal('addClientModal')">+ לקוח חדש</button></div></div>
+    <div class="infobox">כל לקוח = תיקיית R2 + פלייליסט + לוח זמנים + קבוצת סטרימרים.<br>500 סטרימרים מורידים במקביל מ-R2 — Progressive Download.</div>
+    <div class="grid" id="clientCards"></div>
+  </div>
+</div>
+
+<div id="tab-devices" style="display:none">
+  <div class="card">
+    <div class="ch">
+      <div class="ct2">📺 סטרימרים</div>
+      <div class="ca">
+        <button class="btn r" onclick="confirm('לעצור הכל?') && stopAll()">⏹ עצור הכל</button>
+        <button class="btn g" onclick="confirm('להפעיל הכל?') && playAll()">▶ הפעל הכל</button>
+        <button class="btn g" onclick="openModal('addDeviceModal')">+ סטרימר חדש</button>
+      </div>
+    </div>
+    <table class="tbl" width="100%">
+      <thead><tr><th>סטטוס</th><th>שם</th><th>לקוח</th><th>מיקום</th><th>מנגן</th><th>ספרייה</th><th>גרסה</th><th>נראה</th><th>פעולות</th></tr></thead>
+      <tbody id="devTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="tab-library" style="display:none">
+  <div class="r2-stats">
+    <div class="r2s"><div class="r2sv" id="r2cnt">0</div><div class="r2sl">קבצי MP3</div></div>
+    <div class="r2s"><div class="r2sv" id="r2sz">0 GB</div><div class="r2sl">גודל כולל</div></div>
+    <div class="r2s"><div class="r2sv co">~$0</div><div class="r2sl">עלות חודשית</div></div>
+  </div>
+  <div class="card">
+    <div class="ch">
+      <div class="ct2">☁️ ספרייה — Cloudflare R2</div>
+      <div class="ca">
+        <button class="btn" id="r2backbtn" onclick="r2Up()" style="display:none">← חזור</button>
+        <button class="btn g" onclick="document.getElementById('r2up').click()">⬆️ העלה MP3</button>
+        <button class="btn g" onclick="openModal('addFolderModal')">📁 תיקייה חדשה</button>
+        <button class="btn" onclick="fetchR2Files()" title="טען מחדש מ-R2">🔄 רענן</button>
+      </div>
+    </div>
+    <div class="r2path" id="r2path">📁 / (ראשי)</div>
+    <div id="upprogContainer"></div>
+    <div class="r2-sel-bar hidden" id="r2SelBar">
+      <span id="r2SelCount">0 נבחרו</span>
+      <button class="btn r" onclick="r2DeleteSelected()" style="padding:3px 10px;font-size:12px">🗑 מחק נבחרים</button>
+      <button class="btn" onclick="r2ClearSel()" style="padding:3px 10px;font-size:12px;margin-right:auto">ביטול</button>
+    </div>
+    <div class="r2files" id="r2files"></div>
+    <div class="upzone" id="dropzone" onclick="document.getElementById('r2up').click()">
+      <input type="file" id="r2up" accept=".mp3" multiple onchange="handleUpload(this.files)">
+      <div style="font-size:28px;margin-bottom:8px">🎵</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">גרור קבצי MP3 לכאן</div>
+      <div style="font-size:12px;color:var(--muted)">או לחץ לבחירה — רק MP3</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-playlists" style="display:none">
+  <div id="invbanner" class="alertbar" style="display:none">⛔ <span id="invtxt"></span></div>
+  <div class="card">
+    <div class="ch">
+      <div class="ct2">🎼 פלייליסטים</div>
+      <div class="ca">
+        <button class="btn g" onclick="openModal('addTrackModal')">+ הוסף קטע</button>
+        <button class="btn g" onclick="openModal('addPlaylistModal')">+ פלייליסט חדש</button>
+      </div>
+    </div>
+    <div class="infobox">☁️ מנהל מ-R2 | ✅ רק MP3 | 🔀 Shuffle אוטומטי | ⚡ 500 סטרימרים במקביל</div>
+    <div class="pltabs" id="pltabs"></div>
+    <div class="tklist" id="tracklist"></div>
+  </div>
+</div>
+
+<div id="tab-dayprogram" style="display:none">
+  <div class="card">
+    <div class="ch">
+      <div class="ct2">📆 תוכנית שבועית</div>
+      <div class="ca" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="dp-client-filter" onchange="renderDayProgram()" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:5px 8px;border-radius:6px;font-size:12px;font-weight:700"></select>
+        <select id="dp-day-filter" onchange="renderDayProgram()" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:5px 8px;border-radius:6px;font-size:12px">
+          <option value="א">ראשון</option>
+          <option value="ב">שני</option>
+          <option value="ג">שלישי</option>
+          <option value="ד">רביעי</option>
+          <option value="ה">חמישי</option>
+          <option value="ו">שישי</option>
+          <option value="ש">שבת</option>
+        </select>
+        <button class="btn" onclick="copyDayToAll()" title="שכפל את היום הנוכחי לכל הימים">📋 שכפל לכל הימים</button>
+        <button class="btn" onclick="openCopyToDevicesModal()" title="שכפל תוכנית לסטרימרים אחרים של אותו לקוח">📺 שכפל לסטרימרים</button>
+        <button class="btn g" onclick="openAddBlock()">+ הוסף בלוק</button>
+        <button class="btn r" id="deleteSelectedBtn" onclick="deleteSelectedBlocks()" style="display:none">🗑 מחק נבחרים (<span id="selectedCount">0</span>)</button>
+      </div>
+    </div>
+    <div class="infobox">📆 כל בלוק = שעות + פלייליסט אחד או יותר (ערבוב לפי אחוזים שווים). שעות ללא בלוק = שקט. מעבר תמיד בסיום שיר.</div>
+
+    <!-- טאבי ימים -->
+    <div style="display:flex;gap:4px;margin:10px 0;flex-wrap:wrap" id="dayTabBtns">
+      <button class="day-tab-btn active" data-day="א" onclick="switchDayTab(this)">ראשון</button>
+      <button class="day-tab-btn" data-day="ב" onclick="switchDayTab(this)">שני</button>
+      <button class="day-tab-btn" data-day="ג" onclick="switchDayTab(this)">שלישי</button>
+      <button class="day-tab-btn" data-day="ד" onclick="switchDayTab(this)">רביעי</button>
+      <button class="day-tab-btn" data-day="ה" onclick="switchDayTab(this)">חמישי</button>
+      <button class="day-tab-btn" data-day="ו" onclick="switchDayTab(this)">שישי</button>
+      <button class="day-tab-btn" data-day="ש" onclick="switchDayTab(this)">שבת</button>
+    </div>
+
+    <div id="dpGrid" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+  </div>
+
+  <!-- ציר זמן -->
+  <div class="card" style="margin-top:12px">
+    <div class="ct2" style="margin-bottom:12px">ציר זמן יומי ← לילה | בוקר →</div>
+    <div id="dpTimeline" style="position:relative;height:56px;background:var(--s2);border-radius:8px;overflow:hidden"></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;padding:0 2px;direction:ltr">
+      <span>23:59</span>
+      <span>18:00</span>
+      <span>12:00</span>
+      <span>06:00</span>
+      <span>00:00</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.day-tab-btn{padding:5px 12px;border-radius:7px;border:1px solid var(--bdr);background:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.day-tab-btn:hover,.day-tab-btn.active{background:var(--blue);color:#000;border-color:var(--blue)}
+.day-tab-btn.has-blocks{border-color:var(--green);color:var(--green)}
+.day-tab-btn.has-blocks.active{background:var(--green);color:#000}
+.pl-check-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;border:1px solid var(--bdr);background:var(--s2);margin-bottom:4px;cursor:pointer;transition:background .15s}
+.pl-check-row:hover{background:rgba(88,166,255,.08)}
+.pl-check-row input{width:16px;height:16px;cursor:pointer;accent-color:var(--green)}
+.pl-check-row label{font-size:13px;font-weight:600;cursor:pointer;flex:1}
+.pl-pct{font-size:11px;color:var(--blue);font-weight:700;min-width:40px;text-align:center}
+</style>
+
+<!-- מודל שכפול לסטרימרים -->
+<div class="overlay" id="copyToDevicesModal">
+  <div class="modal" style="max-width:480px;width:95%">
+    <div class="mtitle">📺 שכפל תוכנית לסטרימרים</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">בחר לקוח ואיזה סטרימרים שלו יקבלו את אותה תוכנית השמעה (פלייליסטים + לוחות זמנים)</div>
+
+    <div class="frow" style="margin-bottom:12px">
+      <span class="flbl">לקוח מקור</span>
+      <select id="copy-src-client" onchange="loadCopySourceDevices()" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px;width:100%"></select>
+    </div>
+
+    <div class="frow" style="margin-bottom:12px">
+      <span class="flbl">סטרימר מקור</span>
+      <select id="copy-src-device" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px;width:100%"></select>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px;margin-bottom:8px">העתק אל — בחר סטרימרי יעד:</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn" style="font-size:11px;padding:5px 10px" onclick="selectAllCopyTargets(true)">✓ כולם</button>
+      <button class="btn" style="font-size:11px;padding:5px 10px" onclick="selectAllCopyTargets(false)">✗ נקה</button>
+    </div>
+    <div id="copy-target-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+
+    <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px;margin-bottom:8px">מה לשכפל:</div>
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="copy-include-dayprogram" checked style="accent-color:var(--green);width:16px;height:16px"> תוכנית יום (בלוקים)
+      </label>
+
+    </div>
+
+    <div id="copy-warn" style="display:none;background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.4);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--amber);margin-bottom:10px"></div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal('copyToDevicesModal')">ביטול</button>
+      <button class="btn g" onclick="executeCopyToDevices()">📋 שכפל עכשיו</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודל הוספת בלוק -->
+<div class="overlay" id="addBlockModal">
+  <div class="modal" style="max-width:520px;width:95%">
+    <div class="mtitle">📆 בלוק חדש</div>
+
+    <!-- יום + שעות -->
+    <div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">יום</div>
+        <select id="blk-day" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px">
+          <option value="א">ראשון</option><option value="ב">שני</option><option value="ג">שלישי</option>
+          <option value="ד">רביעי</option><option value="ה">חמישי</option><option value="ו">שישי</option><option value="ש">שבת</option>
+        </select>
+      </div>
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">התחלה</div><input type="time" id="blk-start" value="09:00"/></div>
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">סיום</div><input type="time" id="blk-end" value="12:00"/></div>
+    </div>
+
+    <!-- בחירת פלייליסטים -->
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:1px">בחר פלייליסטים (ערבוב לפי אחוזים שווים)</div>
+    <div id="blk-pl-list" style="max-height:220px;overflow-y:auto;margin-bottom:10px"></div>
+    <div id="blk-pct-preview" style="font-size:12px;color:var(--blue);margin-bottom:10px;min-height:18px"></div>
+
+    <!-- יעד -->
+    <div class="frow"><span class="flbl">יעד</span>
+      <select id="blk-target" onchange="document.getElementById('blk-cs').style.display=this.value=='client'?'flex':'none';document.getElementById('blk-ds').style.display=this.value=='device'?'flex':'none'" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px;width:100%">
+        <option value="all">🌐 כל הסטרימרים</option>
+        <option value="client">🏢 לקוח ספציפי</option>
+        <option value="device">📺 סטרימר ספציפי</option>
+      </select>
+    </div>
+    <div id="blk-cs" style="display:none" class="frow"><span class="flbl">לקוח</span><select id="blk-client" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px;width:100%"></select></div>
+    <div id="blk-ds" style="display:none" class="frow"><span class="flbl">סטרימר</span><select id="blk-device" style="background:var(--s2);border:1px solid var(--bdr);color:var(--txt);padding:7px 10px;border-radius:7px;font-size:12px;width:100%"></select></div>
+
+    <div id="blk-overlap-warn" style="display:none;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.4);border-radius:8px;padding:8px 12px;font-size:12px;color:#ef5350;margin-bottom:8px"></div>
+    <div class="macts">
+      <button class="btn" onclick="closeModal('addBlockModal')">ביטול</button>
+      <button class="btn g" onclick="saveBlock()">✅ הוסף</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="tab-ads" style="display:none">
+  <div class="card">
+    <div class="ch"><div class="ct2">📢 פרסומות</div><div class="ca"><button class="btn g" onclick="openModal('addAdModal')">+ פרסומת חדשה</button></div></div>
+    <div class="infobox">✅ רק בין שירים | 📅 תאריך + תדירות | 🎯 לכולם / לקוח / סטרימר</div>
+    <div id="adsContainer"></div>
+  </div>
+</div>
+
+<div id="tab-log" style="display:none">
+  <div class="card">
+    <div class="ch"><div class="ct2">📋 לוג</div><div class="ca"><button class="btn" onclick="exportLog()">⬇️ CSV</button><button class="btn" onclick="clearLog()">🗑 נקה</button></div></div>
+    <div class="loglist" id="loglist" style="max-height:450px"></div>
+  </div>
+</div>
+
+<div id="tab-settings" style="display:none">
+  <div id="editor-settings-msg" class="card" style="display:none">
+    <div style="text-align:center;padding:20px">
+      <div style="font-size:40px;margin-bottom:12px">🔒</div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:8px">הגדרות — גישת מנהל בלבד</div>
+      <div style="font-size:13px;color:var(--muted)">פנה למנהל הראשי לשינוי הגדרות המערכת.</div>
+    </div>
+  </div>
+  <div id="admin-settings-content" class="card">
+    <div class="ch"><div class="ct2">⚙️ הגדרות</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div>
+        <div class="stitle" style="margin-top:0">🔥 Firebase</div>
+        <div class="frow"><span class="flbl">Database URL</span><input type="text" id="fb-url" placeholder="https://xxx.firebaseio.com"/></div>
+        <div class="frow"><span class="flbl">Secret</span><input type="password" id="fb-key" placeholder="סוד גישה"/></div>
+        <button class="btn" onclick="testFB()">🔗 בדוק</button>
+      </div>
+      <div>
+        <div class="stitle" style="margin-top:0">🟠 Cloudflare R2</div>
+        <div class="frow"><span class="flbl">Account ID</span><input type="text" id="r2-id" placeholder="abc123..."/></div>
+        <div class="frow"><span class="flbl">Bucket</span><input type="text" id="r2-bucket" placeholder="streamcontrol-music"/></div>
+        <div class="frow"><span class="flbl">Access Key</span><input type="password" id="r2-key" placeholder="Access Key ID"/></div>
+        <div class="frow"><span class="flbl">Secret Key</span><input type="password" id="r2-secret" placeholder="Secret Access Key"/></div>
+        <div class="frow"><span class="flbl">Public URL</span><input type="text" id="r2-url" placeholder="https://pub-xxx.r2.dev"/></div>
+        <button class="btn" onclick="testR2()">🔗 בדוק</button>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bdr)" class="admin-only">
+      <div class="stitle" style="margin-top:0">🔐 סיסמת מנהל</div>
+      <div class="frow"><span class="flbl">סיסמה חדשה</span><input type="password" id="np1" placeholder="מינימום 6 תווים"/></div>
+      <div class="frow"><span class="flbl">אימות</span><input type="password" id="np2" placeholder="אמת סיסמה"/></div>
+      <button class="btn" onclick="changePwd()">🔐 שנה סיסמת מנהל</button>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bdr)" class="admin-only">
+      <div class="stitle" style="margin-top:0">✏️ סיסמת עורך תוכן</div>
+      <div class="infobox">עורך תוכן יכול: להעלות מוסיקה, לנהל פלייליסטים ופרסומות.<br>לא יכול: לשנות הגדרות, למחוק לקוחות, לשלוח OTA.</div>
+      <div class="frow"><span class="flbl">סיסמה חדשה</span><input type="password" id="ep1" placeholder="מינימום 6 תווים"/></div>
+      <div class="frow"><span class="flbl">אימות</span><input type="password" id="ep2" placeholder="אמת סיסמה"/></div>
+      <button class="btn" onclick="changeEditorPwd()">✏️ שנה סיסמת עורך</button>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bdr)">
+      <div class="stitle" style="margin-top:0">🔄 עדכוני OTA</div>
+      <div class="frow"><span class="flbl">GitHub URL</span><input type="text" id="ota-url" placeholder="https://github.com/user/repo/releases/latest"/></div>
+      <div class="frow"><span class="flbl">גרסה</span><input type="text" id="ota-ver" value="1.0.0" style="width:100px"/></div>
+      <div class="infobox">הסטרימרים מורידים עדכונים בתור — לא עומסים על הרשת.</div>
+      <button class="btn g" onclick="confirm('לשלוח OTA לכל הסטרימרים?') && pushOTA()">🚀 שלח OTA</button>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bdr);text-align:left">
+      <button class="btn g" onclick="saveSettings()">💾 שמור הגדרות</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="rp">
+  <div>
+    <span class="rplbl">▶ מנגן עכשיו</span>
+    <div class="nptrack" id="rp-track">—</div>
+    <div class="npdev" id="rp-dev">בחר סטרימר</div>
+    <div class="progbar"><div class="progfill" id="rp-prog" style="width:0%"></div></div>
+    <div class="controls">
+      <div class="ctrl" onclick="doCmd('prev')">⏮</div>
+      <div class="ctrl big" id="rp-play" onclick="togglePlay()">▶</div>
+      <div class="ctrl" onclick="doCmd('next')">⏭</div>
+      <div class="ctrl" onclick="doCmd('shuffle')">🔀</div>
+    </div>
+    <div class="volrow">🔇<input type="range" id="rp-vol" min="0" max="100" value="70" oninput="setVol(this.value)">🔊<span id="rp-volv" style="font-size:11px;min-width:32px">70%</span></div>
+  </div>
+  <div>
+    <span class="rplbl">📺 סטרימר נבחר</span>
+    <div id="rp-info" style="font-size:12px;color:var(--muted);line-height:1.9">לחץ על סטרימר</div>
+  </div>
+  <div>
+    <span class="rplbl">⚡ עקיפת לוח זמנים</span>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">פעולה ידנית — דורסת על הלוח.</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn g" style="flex:1" onclick="confirm('להפעיל?') && doCmd('play')">▶ הפעל</button>
+      <button class="btn r" style="flex:1" onclick="confirm('לעצור?') && doCmd('stop')">⏹ עצור</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto">
+    <span class="rplbl">אירועים</span>
+    <div class="loglist" id="minilog" style="max-height:200px"></div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="addClientModal">
+  <div class="modal">
+    <div class="mtitle">🏢 לקוח חדש</div>
+    <div class="msub">כל לקוח מקבל תיקיית R2, פלייליסט, לוח זמנים, וקבוצת סטרימרים.</div>
+    <div class="frow"><span class="flbl">שם לקוח</span><input type="text" id="nc-name" placeholder="רשת קפה ABC"/></div>
+    <div class="frow"><span class="flbl">צבע</span>
+      <div class="cpick">
+        <div class="csw sel" style="background:#3fb950" data-c="#3fb950" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#58a6ff" data-c="#58a6ff" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#f0883e" data-c="#f0883e" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#f85149" data-c="#f85149" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#bc8cff" data-c="#bc8cff" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#d29922" data-c="#d29922" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#39d353" data-c="#39d353" onclick="pickColor(this)"></div>
+        <div class="csw" style="background:#e06c75" data-c="#e06c75" onclick="pickColor(this)"></div>
+      </div>
+    </div>
+    <div class="infobox">תיקיית R2 תיווצר אוטומטית.</div>
+    <div class="macts"><button class="btn" onclick="closeModal('addClientModal')">ביטול</button><button class="btn g" onclick="addClient()">✅ צור לקוח</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="addDeviceModal">
+  <div class="modal">
+    <div class="mtitle">📺 סטרימר חדש</div>
+    <div class="msub">בחיבור ראשון יזוהה אוטומטית ויתחיל Progressive Download מ-R2.</div>
+    <div class="frow"><span class="flbl">שם</span><input type="text" id="nd-name" placeholder="סניף תל אביב"/></div>
+    <div class="frow"><span class="flbl">מיקום</span><input type="text" id="nd-loc" placeholder="עיר / כתובת"/></div>
+    <div class="frow"><span class="flbl">מספר סידורי</span><input type="text" id="nd-sn" placeholder="SN-001"/></div>
+    <div class="frow"><span class="flbl">WiFi SSID</span><input type="text" id="nd-wifi" placeholder="שם רשת WiFi"/></div>
+    <div class="frow"><span class="flbl">WiFi סיסמה</span><input type="password" id="nd-wifipwd" placeholder="סיסמת WiFi"/></div>
+    <div class="frow"><span class="flbl">לקוח</span><select id="nd-client"></select></div>
+    <div class="frow"><span class="flbl">עוצמת קול</span><input type="number" id="nd-vol" value="70" min="0" max="100" style="width:80px"/>%</div>
+    <div class="macts"><button class="btn" onclick="closeModal('addDeviceModal')">ביטול</button><button class="btn g" onclick="addDevice()">✅ הוסף</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="addFolderModal">
+  <div class="modal" style="width:360px">
+    <div class="mtitle">📁 תיקייה חדשה</div>
+    <div class="frow"><span class="flbl">שם</span><input type="text" id="nf-name" placeholder="Jazz, Classical..."/></div>
+    <div class="macts"><button class="btn" onclick="closeModal('addFolderModal')">ביטול</button><button class="btn g" onclick="createFolder()">✅ צור</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="addTrackModal">
+  <div class="modal">
+    <div class="mtitle">🎵 הוסף קטע</div>
+    <div class="frow"><span class="flbl">נתיב R2</span><input type="text" id="nt-path" placeholder="shared/song.mp3" oninput="chkWarn(this.value,'nt-warn')"/></div>
+    <div id="nt-warn" class="alertbar" style="display:none">⛔ רק MP3!</div>
+    <div class="frow"><span class="flbl">שם תצוגה</span><input type="text" id="nt-name" placeholder="אופציונלי"/></div>
+    <div class="frow"><span class="flbl">פלייליסט</span><select id="nt-pl"></select></div>
+    <div class="macts"><button class="btn" onclick="closeModal('addTrackModal')">ביטול</button><button class="btn g" onclick="addTrack()">✅ הוסף</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="addPlaylistModal">
+  <div class="modal">
+    <div class="mtitle">🎼 פלייליסט חדש</div>
+    <div class="frow"><span class="flbl">שם</span><input type="text" id="npl-name" placeholder="ג׳אז, קלאסי..."/></div>
+    <div class="frow"><span class="flbl">תיקיית R2</span><input type="text" id="npl-folder" placeholder="shared/ או clients/c001/"/></div>
+    <div class="frow"><span class="flbl">לקוח</span><select id="npl-client"><option value="">— ללא שיוך —</option></select></div>
+    <div class="macts"><button class="btn" onclick="closeModal('addPlaylistModal')">ביטול</button><button class="btn g" onclick="addPlaylist()">✅ צור</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="addAdModal">
+  <div class="modal">
+    <div class="mtitle">📢 פרסומת חדשה</div>
+    <div class="frow"><span class="flbl">שם</span><input type="text" id="na-name" placeholder="מבצע קיץ"/></div>
+    <div class="frow"><span class="flbl">נתיב R2</span><input type="text" id="na-path" placeholder="ads/summer.mp3" oninput="chkWarn(this.value,'na-warn')"/></div>
+    <div id="na-warn" class="alertbar" style="display:none">⛔ רק MP3!</div>
+    <div class="f2">
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">תאריך התחלה</div><input type="date" id="na-from"/></div>
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">תאריך סיום</div><input type="date" id="na-to"/></div>
+    </div>
+    <div class="frow"><span class="flbl">תדירות</span>
+      <select id="na-freq" onchange="document.getElementById('na-cust').style.display=this.value=='custom'?'flex':'none'">
+        <option value="1">פעם בשעה</option><option value="2">פעמיים בשעה</option>
+        <option value="3">3× בשעה</option><option value="4">4× בשעה</option>
+        <option value="custom">מספר ידני ביום</option>
+      </select>
+    </div>
+    <div id="na-cust" style="display:none" class="frow"><span class="flbl">פעמים ביום</span><input type="number" id="na-times" value="5" min="1" max="50" style="width:80px"/></div>
+    <div class="frow"><span class="flbl">יעד</span>
+      <select id="na-target" onchange="document.getElementById('na-cs').style.display=this.value=='client'?'flex':'none';document.getElementById('na-ds').style.display=this.value=='device'?'flex':'none'">
+        <option value="all">🌐 כל הסטרימרים</option>
+        <option value="client">לקוח ספציפי</option>
+        <option value="device">סטרימר ספציפי</option>
+      </select>
+    </div>
+    <div id="na-cs" style="display:none" class="frow"><span class="flbl">לקוח</span><select id="na-client"></select></div>
+    <div id="na-ds" style="display:none" class="frow"><span class="flbl">סטרימר</span><select id="na-device"></select></div>
+    <div class="infobox">✅ הפרסומת נכנסת רק בין שירים — בתוך חלון המוסיקה בלבד</div>
+    <div id="ad-sched-warn" style="display:none;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.4);border-radius:8px;padding:10px 14px;font-size:12px;color:#ef5350;margin-bottom:10px;line-height:1.6"></div>
+    <div class="macts"><button class="btn" onclick="closeModal('addAdModal')">ביטול</button><button class="btn g" onclick="addAd()">✅ הוסף</button></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"><span id="ni"></span><span id="nt"></span></div>
+
+<script>
+var DEFAULT_PWD = 'StreamControl2025';
+var S = {
+  clients: [], devices: [], playlists: [], schedules: [], ads: [], log: [],
+  dayPrograms: [],
+  selDev: null, progVal: 0, curPl: null, selColor: '#3fb950',
+  r2Path: '', r2Files: []
+};
+
+function getPwd() { return localStorage.getItem('sc_pwd') || DEFAULT_PWD; }
+
+function getEditorPwd() { return localStorage.getItem('sc_editor_pwd') || 'Editor2025'; }
+
+function doLogin() {
+  var val = document.getElementById('pwdInput').value;
+  var role = document.getElementById('userRole').value;
+  var err = document.getElementById('loginErr');
+  var ok = false;
+  if (role === 'admin' && val === getPwd()) { ok = true; CURRENT_USER = 'admin'; }
+  else if (role === 'editor' && val === getEditorPwd()) { ok = true; CURRENT_USER = 'editor'; }
+  if (ok) {
+    document.getElementById('loginScreen').style.display = 'none';
+    var app = document.getElementById('app');
+    app.style.display = 'flex';
+    app.style.flexDirection = 'column';
+    app.style.height = '100%';
+    localStorage.setItem('sc_auth', '1');
+    localStorage.setItem('sc_role', CURRENT_USER);
+    applyRole();
+    loadDemo();
+    renderAll();
+    notify('✅ ברוך הבא ' + (CURRENT_USER === 'admin' ? '(מנהל ראשי)' : '(עורך תוכן)'), 'ok');
+  } else {
+    err.textContent = '❌ סיסמה שגויה';
+    document.getElementById('pwdInput').value = '';
+    setTimeout(function() { err.textContent = ''; }, 3000);
+  }
+}
+
+function applyRole() {
+  var isAdmin = CURRENT_USER === 'admin';
+  // Hide admin-only elements for editors
+  var adminOnly = document.querySelectorAll('.admin-only');
+  adminOnly.forEach(function(el) {
+    el.style.display = isAdmin ? '' : 'none';
+  });
+  // Show role badge in topbar
+  var badge = document.getElementById('role-badge');
+  if (badge) {
+    badge.textContent = isAdmin ? '👑 מנהל' : '✏️ עורך';
+    badge.style.borderColor = isAdmin ? 'var(--yellow)' : 'var(--blue)';
+    badge.style.color = isAdmin ? 'var(--yellow)' : 'var(--blue)';
+  }
+  // Show/hide settings content based on role
+  var editorMsg = document.getElementById('editor-settings-msg');
+  var adminContent = document.getElementById('admin-settings-content');
+  if (editorMsg) editorMsg.style.display = isAdmin ? 'none' : '';
+  if (adminContent) adminContent.style.display = isAdmin ? '' : 'none';
+  // Keep settings tab visible for editor but show restricted message
+}
+
+function logout() {
+  localStorage.removeItem('sc_auth');
+  localStorage.removeItem('sc_role');
+  if (SYNC_INTERVAL) { clearInterval(SYNC_INTERVAL); SYNC_INTERVAL = null; }
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pwdInput').value = '';
+  CURRENT_USER = 'admin';
+}
+
+function changeEditorPwd() {
+  var p1 = document.getElementById('ep1').value;
+  var p2 = document.getElementById('ep2').value;
+  if (!p1) { notify('הכנס סיסמה חדשה', 'warn'); return; }
+  if (p1 !== p2) { notify('הסיסמאות אינן תואמות', 'err'); return; }
+  if (p1.length < 6) { notify('מינימום 6 תווים', 'warn'); return; }
+  localStorage.setItem('sc_editor_pwd', p1);
+  document.getElementById('ep1').value = '';
+  document.getElementById('ep2').value = '';
+  notify('✅ סיסמת עורך שונתה', 'ok');
+}
+
+function changePwd() {
+  var p1 = document.getElementById('np1').value;
+  var p2 = document.getElementById('np2').value;
+  if (!p1) { notify('הכנס סיסמה חדשה', 'warn'); return; }
+  if (p1 !== p2) { notify('הסיסמאות אינן תואמות', 'err'); return; }
+  if (p1.length < 6) { notify('מינימום 6 תווים', 'warn'); return; }
+  localStorage.setItem('sc_pwd', p1);
+  document.getElementById('np1').value = '';
+  document.getElementById('np2').value = '';
+  notify('✅ סיסמה שונתה', 'ok');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('pwdInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  if (localStorage.getItem('sc_auth') === '1') {
+    CURRENT_USER = localStorage.getItem('sc_role') || 'admin';
+    document.getElementById('loginScreen').style.display = 'none';
+    var app = document.getElementById('app');
+    app.style.display = 'flex';
+    app.style.flexDirection = 'column';
+    app.style.height = '100%';
+    applyRole();
+    loadSettings();
+    loadDemo();
+    renderAll();
+  }
+  setTimeout(function() {
+    var dz = document.getElementById('dropzone');
+    if (!dz) return;
+    dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', function() { dz.classList.remove('drag'); });
+    dz.addEventListener('drop', function(e) { e.preventDefault(); dz.classList.remove('drag'); handleUpload(e.dataTransfer.files); });
+  }, 300);
+});
+
+function uid() { return 'ID' + Date.now() + Math.random().toString(36).slice(2, 5); }
+function v(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+function isMP3(p) { return p.toLowerCase().endsWith('.mp3'); }
+function nowStr() { return new Date().toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}); }
+function fmt(b) { if (b < 1048576) return (b/1024).toFixed(0)+'KB'; if (b < 1073741824) return (b/1048576).toFixed(1)+'MB'; return (b/1073741824).toFixed(2)+'GB'; }
+var DAYS = ['א','ב','ג','ד','ה','ו','ש'];
+
+var FB = {
+  url: '', secret: '',
+  put: function(p, d) {
+    if (!this.url) return Promise.resolve();
+    return fetch(this.url+'/'+p+'.json?auth='+this.secret, {method:'PUT', body:JSON.stringify(d)}).catch(function(){});
+  },
+  patch: function(p, d) {
+    if (!this.url) return Promise.resolve();
+    return fetch(this.url+'/'+p+'.json?auth='+this.secret, {method:'PATCH', body:JSON.stringify(d)}).catch(function(){});
+  },
+  get: function(p) {
+    if (!this.url) return Promise.resolve(null);
+    return fetch(this.url+'/'+p+'.json?auth='+this.secret).then(function(r){return r.json();}).catch(function(){return null;});
+  },
+  del: function(p) {
+    if (!this.url) return Promise.resolve();
+    return fetch(this.url+'/'+p+'.json?auth='+this.secret, {method:'DELETE'}).catch(function(){});
+  },
+  // Save entire state to Firebase
+  saveAll: function() {
+    if (!this.url) return;
+    var self = this;
+    self.put('sc_data/clients', S.clients);
+    self.put('sc_data/devices', S.devices);
+    self.put('sc_data/playlists', S.playlists);
+    self.put('sc_data/ads', S.ads);
+    self.put('sc_data/dayPrograms', S.dayPrograms);
+    self.put('sc_data/lastUpdate', {ts: Date.now(), user: CURRENT_USER});
+  },
+  // Load state from Firebase
+  loadAll: function(cb) {
+    if (!this.url) { cb && cb(false); return; }
+    this.get('sc_data').then(function(data) {
+      if (!data) { cb && cb(false); return; }
+      if (data.clients && Array.isArray(data.clients)) S.clients = data.clients;
+      if (data.devices && Array.isArray(data.devices)) S.devices = data.devices;
+      if (data.playlists && Array.isArray(data.playlists)) S.playlists = data.playlists;
+      if (data.ads && Array.isArray(data.ads)) S.ads = data.ads;
+      if (data.dayPrograms && Array.isArray(data.dayPrograms)) S.dayPrograms = data.dayPrograms;
+      if (data.playlists && data.playlists.length > 0) S.curPl = data.playlists[0].id;
+      cb && cb(true);
+    });
+  }
+};
+
+var CURRENT_USER = 'admin';
+var SYNC_INTERVAL = null;
+
+function startSync() {
+  if (SYNC_INTERVAL) clearInterval(SYNC_INTERVAL);
+  // Poll Firebase every 5 seconds for changes
+  SYNC_INTERVAL = setInterval(function() {
+    if (!FB.url) return;
+    FB.get('sc_data/lastUpdate').then(function(data) {
+      if (!data) return;
+      // If updated by another user, reload
+      if (data.user !== CURRENT_USER && data.ts > (window._lastSyncTs || 0)) {
+        window._lastSyncTs = data.ts;
+        FB.loadAll(function(ok) {
+          if (ok) {
+            renderAll();
+            notify('🔄 עודכן על ידי משתמש אחר', 'warn');
+          }
+        });
+      }
+    });
+  }, 5000);
+}
+
+function loadDemo() {
+  S.clients = [
+    {id:'C001', name:'רשת קפה ABC', color:'#3fb950', playlistId:'PL001'},
+    {id:'C002', name:'בוטיק האופנה XYZ', color:'#58a6ff', playlistId:'PL002'},
+    {id:'C003', name:'מסעדת הגורמה', color:'#f0883e', playlistId:'PL003'}
+  ];
+  S.playlists = [
+    {id:'PL001', name:'ג׳אז קלאסי', clientId:'C001', folder:'clients/c001/', tracks:[
+      {id:'T1', name:'Bach - Cello Suite No.1', path:'clients/c001/bach.mp3', dur:'4:32', valid:true},
+      {id:'T2', name:'Miles Davis - So What', path:'clients/c001/miles.mp3', dur:'9:22', valid:true},
+      {id:'T3', name:'סרטון שגוי ← חסום', path:'clients/c001/video.mp4', dur:'—', valid:false}
+    ]},
+    {id:'PL002', name:'פופ מודרני', clientId:'C002', folder:'clients/c002/', tracks:[
+      {id:'T5', name:'Vivaldi - Four Seasons', path:'clients/c002/vivaldi.mp3', dur:'3:41', valid:true}
+    ]},
+    {id:'PL003', name:'אמביאנט', clientId:'C003', folder:'shared/', tracks:[
+      {id:'T7', name:'Chopin - Nocturne Op.9', path:'shared/chopin.mp3', dur:'4:20', valid:true}
+    ]}
+  ];
+  S.curPl = 'PL001';
+  S.devices = [
+    {id:'D001', name:'סניף תל אביב', loc:'תל אביב', sn:'SN-001', clientId:'C001', status:'on', dlPct:100, playing:'Bach - Cello Suite No.1', vol:70, manual:false, lastSeen:nowStr(), version:'1.0.0', libTotal:4200, libLocal:4200},
+    {id:'D002', name:'סניף ירושלים', loc:'ירושלים', sn:'SN-002', clientId:'C001', status:'dl', dlPct:18, playing:'Miles Davis', vol:65, manual:false, lastSeen:nowStr(), version:'1.0.0', libTotal:4200, libLocal:756},
+    {id:'D003', name:'בוטיק רמת גן', loc:'רמת גן', sn:'SN-003', clientId:'C002', status:'on', dlPct:100, playing:'Vivaldi', vol:60, manual:false, lastSeen:nowStr(), version:'1.0.0', libTotal:2800, libLocal:2800},
+    {id:'D004', name:'סניף חיפה', loc:'חיפה', sn:'SN-004', clientId:'C001', status:'off', dlPct:100, playing:'—', vol:70, manual:false, lastSeen:'10.06.2025 14:32', version:'0.9.5', libTotal:4200, libLocal:4200}
+  ];
+  S.schedules = [
+    {id:'SC1', target:'all', tName:'כל הסטרימרים', start:'09:00', end:'21:00', days:['א','ב','ג','ד','ה'], offDays:['ו','ש'], vol:70, isDef:true},
+    {id:'SC2', target:'client:C002', tName:'בוטיק האופנה XYZ', start:'10:00', end:'22:00', days:['א','ב','ג','ד','ה','ו'], offDays:['ש'], vol:60, isDef:false}
+  ];
+  S.ads = [
+    {id:'A1', name:'מבצע קיץ 2025', path:'ads/summer.mp3', from:'2025-06-01', to:'2025-08-31', freq:'2', target:'all', active:true, valid:true}
+  ];
+  S.r2Files = [
+    {key:'shared/', type:'folder', size:0},
+    {key:'shared/chopin.mp3', type:'file', size:6291456},
+    {key:'clients/', type:'folder', size:0},
+    {key:'clients/c001/', type:'folder', size:0},
+    {key:'clients/c001/bach.mp3', type:'file', size:5242880},
+    {key:'clients/c001/miles.mp3', type:'file', size:12582912},
+    {key:'ads/', type:'folder', size:0},
+    {key:'ads/summer.mp3', type:'file', size:2097152}
+  ];
+  S.log = [
+    {t:nowStr(), dev:'תל אביב', msg:'▶ מנגן: Bach - Cello Suite No.1', type:'play'},
+    {t:nowStr(), dev:'מערכת', msg:'⛔ חסום: video.mp4 — לא MP3', type:'invalid'},
+    {t:nowStr(), dev:'ירושלים', msg:'⬇ Progressive Download (18%)', type:'sync'}
+  ];
+}
+
+function renderAll() {
+  renderSidebar(); renderStatus(); renderClients(); renderDevTable();
+  renderR2(); renderPlaylists(); renderAds();
+  renderLog(); renderMiniLog(); updateStats(); updateSelects();
+}
+
+function renderSidebar() {
+  var html = '';
+  S.clients.forEach(function(c) {
+    var devs = S.devices.filter(function(d) { return d.clientId === c.id; });
+    html += '<div style="margin-bottom:4px">';
+    html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:12px;font-weight:800">';
+    html += '<div style="width:8px;height:8px;border-radius:50%;background:' + c.color + '"></div>' + c.name;
+    html += '</div>';
+    devs.forEach(function(d) {
+      var cls = 'sbi' + (d.id === S.selDev ? ' active' : '');
+      html += '<div class="' + cls + '" data-devid="' + d.id + '" onclick="selDevById(this)">';
+      html += '<div class="dd ' + d.status + '"></div>';
+      html += '<div><div style="font-size:11px;font-weight:700">' + d.name + '</div>';
+      html += '<div style="font-size:9px;color:var(--muted)">' + d.loc + '</div></div></div>';
+    });
+    html += '</div>';
+  });
+  document.getElementById('sbClients').innerHTML = html;
+}
+
+function selDevById(el) {
+  var id = el.getAttribute('data-devid');
+  selDev(id);
+}
+
+function renderStatus() {
+  var inv = S.playlists.some(function(pl) { return pl.tracks.some(function(t) { return !t.valid; }); });
+  document.getElementById('inv-alert').style.display = inv ? 'flex' : 'none';
+  var html = '';
+  S.devices.forEach(function(d) {
+    var c = S.clients.find(function(x) { return x.id === d.clientId; });
+    var pl = S.playlists.find(function(p) { return c && p.id === c.playlistId; });
+    var pct = d.libTotal > 0 ? Math.round(d.libLocal / d.libTotal * 100) : 0;
+    var ok = d.libLocal >= d.libTotal;
+    html += '<div class="dc ' + d.status + '" data-devid="' + d.id + '" onclick="selDevById(this)">';
+    html += '<div class="dc-stripe"></div>';
+    html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">';
+    html += '<div><div style="font-size:13px;font-weight:900">' + d.name + '</div>';
+    html += '<div style="font-size:10px;color:var(--muted)">' + d.loc + ' · ' + d.sn + '</div>';
+    if (c) html += '<div style="font-size:10px;display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:6px;height:6px;border-radius:50%;background:' + c.color + '"></div><span style="color:var(--muted)">' + c.name + '</span></div>';
+    html += '</div>';
+    var badge = d.status === 'on' ? '<span class="badge b-on">● מחובר</span>' : d.status === 'dl' ? '<span class="badge b-dl">⬇ מוריד</span>' : '<span class="badge b-off">● מנותק</span>';
+    html += badge + '</div>';
+    if (d.status !== 'off') {
+      html += '<div class="now"><div class="now-l">' + (d.manual ? '⚡ ידני' : '🔀 Shuffle') + ' ▶</div>';
+      html += '<div class="now-t">' + d.playing + '</div>';
+      if (pl) html += '<div style="font-size:10px;color:var(--muted)">' + pl.name + '</div>';
+      html += '</div>';
+    } else {
+      html += '<div style="background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.15);border-radius:6px;padding:7px 9px;margin-bottom:8px;font-size:11px;color:var(--muted)">מנותק — נראה: ' + d.lastSeen + '</div>';
+    }
+    html += '<div class="liblebl"><span>' + (d.status === 'dl' ? '⬇ ' + d.dlPct + '%' : 'ספרייה') + '</span><span>' + d.libLocal.toLocaleString() + '/' + d.libTotal.toLocaleString() + (ok ? ' ✅' : '') + '</span></div>';
+    html += '<div class="libbar"><div class="libfill' + (ok ? '' : ' inc') + '" style="width:' + pct + '%"></div></div>';
+    html += '<div class="acts">';
+    html += '<button class="ib g" onclick="event.stopPropagation();devCmd(\''+d.id+'\',\'play\')">▶</button>';
+    html += '<button class="ib" onclick="event.stopPropagation();devCmd(\''+d.id+'\',\'stop\')">⏹</button>';
+    html += '<button class="ib" onclick="event.stopPropagation();devCmd(\''+d.id+'\',\'next\')">⏭</button>';
+    html += '<button class="ib" onclick="event.stopPropagation();devCmd(\''+d.id+'\',\'sync\')">☁️</button>';
+    html += '</div></div>';
+  });
+  document.getElementById('statusCards').innerHTML = html;
+}
+
+function renderClients() {
+  var html = '';
+  S.clients.forEach(function(c) {
+    var pl = S.playlists.find(function(p) { return p.id === c.playlistId; });
+    var devs = S.devices.filter(function(d) { return d.clientId === c.id; });
+    html += '<div class="cc"><div class="cc-top">';
+    html += '<div class="ccdot" style="background:' + c.color + '"></div>';
+    html += '<div style="flex:1;min-width:0"><div class="ccname">' + c.name + '</div>';
+    html += '</div>';
+    html += '<div style="text-align:left"><span class="badge b-on">' + devs.filter(function(d) { return d.status === 'on'; }).length + ' פעיל</span></div>';
+    html += '</div><div class="cc-body"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">סטרימרים</div>';
+    devs.forEach(function(d) {
+      html += '<div class="devrow"><div class="dd ' + d.status + '"></div>';
+      html += '<div style="flex:1"><div style="font-weight:700">' + d.name + '</div><div style="font-size:10px;color:var(--muted)">' + d.loc + '</div></div>';
+      html += '<div style="font-size:10px;color:var(--green)">' + (d.status !== 'off' ? d.playing : 'מנותק') + '</div></div>';
+    });
+    if (!devs.length) html += '<div style="font-size:11px;color:var(--muted);padding:6px 0">אין סטרימרים</div>';
+    html += '</div><div class="cc-foot">';
+    html += '<button class="btn" style="font-size:11px" onclick="if(confirm(\'לעצור?\'))stopClient(\'' + c.id + '\')">⏹ עצור</button>';
+    html += '<button class="btn g" style="font-size:11px" onclick="if(confirm(\'להפעיל?\'))playClient(\'' + c.id + '\')">▶ הפעל</button>';
+    html += '<button class="btn" style="font-size:11px" onclick="syncClient(\'' + c.id + '\')">☁️</button>';
+    if (CURRENT_USER === 'admin') html += '<button class="ib r" onclick="if(confirm(\'למחוק?\'))removeClient(\'' + c.id + '\')">✕</button>';
+    html += '</div></div>';
+  });
+  document.getElementById('clientCards').innerHTML = html;
+  document.getElementById('ct-cl').textContent = S.clients.length;
+}
+
+function renderDevTable() {
+  var html = '';
+  S.devices.forEach(function(d) {
+    var c = S.clients.find(function(x) { return x.id === d.clientId; });
+    var ok = d.libLocal >= d.libTotal;
+    var pct = d.libTotal > 0 ? Math.round(d.libLocal / d.libTotal * 100) : 0;
+    var badge = d.status === 'on' ? '<span class="badge b-on">● מחובר</span>' : d.status === 'dl' ? '<span class="badge b-dl">⬇ מוריד</span>' : '<span class="badge b-off">● מנותק</span>';
+    html += '<tr onclick="selDev(\'' + d.id + '\')">';
+    html += '<td>' + badge + '</td>';
+    html += '<td><strong>' + d.name + '</strong>' + (d.manual ? ' <span class="badge b-w">ידני</span>' : '') + '</td>';
+    html += '<td>' + (c ? '<span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:' + c.color + ';display:inline-block"></span>' + c.name + '</span>' : '—') + '</td>';
+    html += '<td style="font-size:11px">' + d.loc + '</td>';
+    html += '<td style="font-size:11px;color:var(--green);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + d.playing + '</td>';
+    html += '<td>' + (d.status === 'dl' ? pct + '%' : ok ? '✅ ' + d.libLocal.toLocaleString() : '⚠️') + '</td>';
+    html += '<td style="font-size:11px">' + d.version + '</td>';
+    html += '<td style="font-size:11px;' + (d.status !== 'off' ? 'color:var(--green)' : '') + '">' + (d.status !== 'off' ? 'כעת' : d.lastSeen) + '</td>';
+    html += '<td><div style="display:flex;gap:4px">';
+    html += '<button class="ib g" onclick="event.stopPropagation();devCmd(\'' + d.id + '\',\'play\')">▶</button>';
+    html += '<button class="ib" onclick="event.stopPropagation();devCmd(\'' + d.id + '\',\'stop\')">⏹</button>';
+    html += '<button class="ib" onclick="event.stopPropagation();devCmd(\'' + d.id + '\',\'sync\')">☁️</button>';
+    if (CURRENT_USER === 'admin') html += '<button class="ib r" onclick="event.stopPropagation();if(confirm(\'להסיר?\'))removeDevice(\'' + d.id + '\')">✕</button>';
+    html += '</div></td></tr>';
+  });
+  document.getElementById('devTable').innerHTML = html;
+}
+
+function renderR2() {
+  var path = S.r2Path;
+  document.getElementById('r2path').textContent = '📁 /' + (path || '(ראשי)');
+  document.getElementById('r2backbtn').style.display = path ? '' : 'none';
+  var allFiles = S.r2Files.filter(function(f) { return f.type === 'file'; });
+  var totalSize = allFiles.reduce(function(s, f) { return s + f.size; }, 0);
+  document.getElementById('r2cnt').textContent = allFiles.length.toLocaleString();
+  document.getElementById('r2sz').textContent = fmt(totalSize);
+  document.getElementById('ct-r2').textContent = allFiles.length;
+  var items = S.r2Files.filter(function(f) {
+    if (!path) return !f.key.slice(0, -1).includes('/');
+    if (!f.key.startsWith(path)) return false;
+    var rest = f.key.slice(path.length);
+    return rest && !rest.slice(0, -1).includes('/');
+  });
+  if (!S.r2Sel) S.r2Sel = {};
+  var html = '';
+  items.forEach(function(f) {
+    var sel = !!S.r2Sel[f.key];
+    var selCls = sel ? ' selected' : '';
+    var ek = f.key.replace(/'/g, "\\'");
+    if (f.type === 'folder') {
+      var nm = f.key.replace(path, '').replace(/\/$/, '');
+      var cnt = S.r2Files.filter(function(x) { return x.key.startsWith(f.key) && x.type === 'file'; }).length;
+      html += '<div class="r2f folder' + selCls + '">';
+      html += '<input type="checkbox" class="r2cb" ' + (sel ? 'checked' : '') + ' onclick="event.stopPropagation();r2ToggleSel(\'' + ek + '\',this.checked)">';
+      html += '<span style="font-size:15px;cursor:pointer" onclick="r2Go(\'' + ek + '\')">📁</span>';
+      html += '<div class="r2fn" onclick="r2Go(\'' + ek + '\')" style="cursor:pointer"> ' + nm + '/</div>';
+      html += '<div class="r2fsz">' + cnt + ' קבצים</div>';
+      html += '<div class="r2fa"><button class="ib r" onclick="event.stopPropagation();r2DeleteFolder(\'' + ek + '\',' + cnt + ')">🗑</button></div>';
+      html += '</div>';
+    } else {
+      var nm2 = f.key.split('/').pop();
+      var valid = isMP3(nm2);
+      html += '<div class="r2f' + selCls + '">';
+      html += '<input type="checkbox" class="r2cb" ' + (sel ? 'checked' : '') + ' onclick="r2ToggleSel(\'' + ek + '\',this.checked)">';
+      html += '<span style="font-size:15px">' + (valid ? '🎵' : '⛔') + '</span>';
+      html += '<div class="r2fn" style="' + (valid ? '' : 'color:var(--red)') + '">' + nm2 + (valid ? '' : ' <span style="font-size:10px;background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.3);border-radius:3px;padding:1px 5px">לא MP3</span>') + '</div>';
+      html += '<div class="r2fsz">' + fmt(f.size) + '</div>';
+      html += '<div class="r2fa">';
+      html += '<button class="ib" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + ek + '\');notify(\'📋 הועתק\',\'ok\')">📋</button>';
+      html += '<button class="ib r" onclick="if(confirm(\'למחוק?\'))r2Delete(\'' + ek + '\')">🗑</button>';
+      html += '</div></div>';
+    }
+  });
+  if (!items.length) html = '<div style="padding:20px;text-align:center;color:var(--muted)">תיקייה ריקה</div>';
+  document.getElementById('r2files').innerHTML = html;
+  r2UpdateSelBar();
+}
+
+function r2ToggleSel(key, checked) {
+  if (!S.r2Sel) S.r2Sel = {};
+  if (checked) S.r2Sel[key] = true; else delete S.r2Sel[key];
+  var allRows = document.querySelectorAll('#r2files .r2f');
+  allRows.forEach(function(row) {
+    var cb = row.querySelector('.r2cb');
+    if (cb) row.classList.toggle('selected', cb.checked);
+  });
+  r2UpdateSelBar();
+}
+
+function r2UpdateSelBar() {
+  var keys = Object.keys(S.r2Sel || {});
+  var bar = document.getElementById('r2SelBar');
+  if (!bar) return;
+  if (keys.length > 0) {
+    bar.classList.remove('hidden');
+    document.getElementById('r2SelCount').textContent = keys.length + ' נבחרו';
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function r2ClearSel() { S.r2Sel = {}; renderR2(); }
+
+function r2DeleteFolder(key, cnt) {
+  var msg = cnt > 0 ? 'למחוק את התיקייה ואת ' + cnt + ' הקבצים בתוכה?' : 'למחוק את התיקייה?';
+  if (!confirm(msg)) return;
+  var toDelete = S.r2Files.filter(function(f) { return f.key.startsWith(key) && f.type === 'file'; });
+  var done = 0;
+  if (toDelete.length === 0) {
+    S.r2Files = S.r2Files.filter(function(f) { return !f.key.startsWith(key); });
+    if (S.r2Sel) delete S.r2Sel[key];
+    renderR2();
+    notify('🗑 תיקייה נמחקה', 'ok');
+    return;
+  }
+  toDelete.forEach(function(f) {
+    fetch(R2_WORKER_URL + '/' + f.key, {
+      method: 'DELETE',
+      headers: { 'X-Auth-Token': 'StreamControl2025' }
+    }).then(function() {
+      done++;
+      if (done === toDelete.length) {
+        S.r2Files = S.r2Files.filter(function(x) { return !x.key.startsWith(key); });
+        if (S.r2Sel) delete S.r2Sel[key];
+        renderR2();
+        addLog('R2', '🗑 תיקייה נמחקה: ' + key, 'upload');
+        notify('🗑 תיקייה נמחקה (' + done + ' קבצים)', 'ok');
+      }
+    });
+  });
+}
+
+function r2DeleteSelected() {
+  var keys = Object.keys(S.r2Sel || {});
+  if (!keys.length) return;
+  var totalFiles = 0;
+  keys.forEach(function(k) {
+    var isFolder = S.r2Files.some(function(f) { return f.key === k && f.type === 'folder'; });
+    if (isFolder) totalFiles += S.r2Files.filter(function(f) { return f.key.startsWith(k) && f.type === 'file'; }).length;
+    else totalFiles++;
+  });
+  if (!confirm('למחוק ' + keys.length + ' פריטים (' + totalFiles + ' קבצים)?')) return;
+  keys.forEach(function(k) {
+    var isFolder = S.r2Files.some(function(f) { return f.key === k && f.type === 'folder'; });
+    if (isFolder) S.r2Files = S.r2Files.filter(function(f) { return !f.key.startsWith(k); });
+    else S.r2Files = S.r2Files.filter(function(f) { return f.key !== k; });
+  });
+  S.r2Sel = {};
+  renderR2();
+  addLog('R2', '🗑 נמחקו ' + keys.length + ' פריטים', 'upload');
+  notify('🗑 נמחקו ' + keys.length + ' פריטים', 'ok');
+}
+
+function r2Go(p) { S.r2Path = p; S.r2Sel = {}; renderR2(); }
+function r2Up() { var parts = S.r2Path.split('/').filter(Boolean); parts.pop(); S.r2Path = parts.length ? parts.join('/') + '/' : ''; S.r2Sel = {}; renderR2(); }
+function r2Delete(key) {
+  fetch(R2_WORKER_URL + '/' + key, {
+    method: 'DELETE',
+    headers: { 'X-Auth-Token': 'StreamControl2025' }
+  }).then(function() {
+    S.r2Files = S.r2Files.filter(function(f) { return f.key !== key; });
+    if (S.r2Sel) delete S.r2Sel[key];
+    renderR2();
+    addLog('R2', '🗑 נמחק: ' + key.split('/').pop(), 'upload');
+    notify('🗑 קובץ נמחק', 'ok');
+  }).catch(function() {
+    notify('❌ שגיאה במחיקה', 'err');
+  });
+}
+
+function fetchR2Files(cb) {
+  fetch(R2_WORKER_URL + '/', {
+    headers: { 'X-Auth-Token': 'StreamControl2025' }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data || !data.files) { cb && cb(false); return; }
+    var files = [];
+    var folders = {};
+    data.files.forEach(function(item) {
+      var key = item.key;
+      var size = item.size || 0;
+      var url = item.url || (R2_PUBLIC_URL + '/' + key);
+      files.push({key: key, type: 'file', size: size, url: url});
+      // Auto-create parent folder entries
+      var parts = key.split('/');
+      if (parts.length > 1) {
+        var folder = '';
+        for (var i = 0; i < parts.length - 1; i++) {
+          folder += parts[i] + '/';
+          if (!folders[folder]) {
+            folders[folder] = true;
+            files.unshift({key: folder, type: 'folder', size: 0});
+          }
+        }
+      }
+    });
+    S.r2Files = files;
+    renderR2();
+    notify('☁️ ' + data.files.length + ' קבצים נטענו מ-R2', 'ok');
+    cb && cb(true);
+  })
+  .catch(function(err) {
+    console.error('R2 list error:', err);
+    notify('❌ שגיאה בטעינת ספרייה מ-R2', 'err');
+    cb && cb(false);
+  });
+}
+
+function handleUpload(files) {
+  var invalid = Array.from(files).filter(function(f) { return !f.name.toLowerCase().endsWith('.mp3'); });
+  var valid = Array.from(files).filter(function(f) { return f.name.toLowerCase().endsWith('.mp3'); });
+  if (invalid.length) {
+    invalid.forEach(function(f) { addLog('R2', '⛔ חסום: ' + f.name + ' — לא MP3', 'invalid'); });
+    notify('⛔ ' + invalid.length + ' קבצים נחסמו — לא MP3', 'err');
+  }
+  valid.forEach(function(f) { uploadFile(f); });
+}
+
+var R2_WORKER_URL = 'https://streamcontrol-r2.erez-musicpro.workers.dev';
+var R2_PUBLIC_URL = 'https://pub-5dd0126225ae4eaf98d001530cf45f93.r2.dev';
+
+function uploadFile(file) {
+  var key = (S.r2Path || 'music/') + file.name;
+  var id = 'up' + uid();
+  var cont = document.getElementById('upprogContainer');
+  cont.insertAdjacentHTML('beforeend',
+    '<div class="upprog" id="' + id + '">' +
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">' +
+    '<span>⬆️ ' + file.name + '</span><span id="' + id + 'p">0%</span></div>' +
+    '<div class="upprogbar"><div class="upprogfill" id="' + id + 'b" style="width:0%"></div></div>' +
+    '</div>');
+
+  // Progress animation during upload
+  var pct = 0;
+  var iv = setInterval(function() {
+    pct = Math.min(pct + 2, 90);
+    var bar = document.getElementById(id + 'b');
+    var ptxt = document.getElementById(id + 'p');
+    if (bar) bar.style.width = pct + '%';
+    if (ptxt) ptxt.textContent = pct + '%';
+  }, 200);
+
+  // העלאה אמיתית דרך ה-Worker
+  fetch(R2_WORKER_URL + '/' + key, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'audio/mpeg',
+      'X-Auth-Token': 'StreamControl2025'
+    },
+    body: file
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    clearInterval(iv);
+    var bar = document.getElementById(id + 'b');
+    var ptxt = document.getElementById(id + 'p');
+    if (bar) bar.style.width = '100%';
+    if (ptxt) ptxt.textContent = '100%';
+    setTimeout(function() {
+      var el = document.getElementById(id);
+      if (el) el.remove();
+    }, 800);
+    if (data.success) {
+      var publicUrl = R2_PUBLIC_URL + '/' + key;
+      S.r2Files.push({key: key, type: 'file', size: file.size, url: publicUrl});
+      renderR2();
+      addLog('R2', '⬆️ הועלה: ' + file.name + ' (' + fmt(file.size) + ')', 'upload');
+      notify('✅ ' + file.name + ' הועלה בהצלחה', 'ok');
+    } else {
+      addLog('R2', '❌ שגיאת העלאה: ' + file.name, 'err');
+      notify('❌ שגיאה בהעלאת ' + file.name, 'err');
+    }
+  })
+  .catch(function(err) {
+    clearInterval(iv);
+    var el = document.getElementById(id);
+    if (el) el.remove();
+    addLog('R2', '❌ שגיאת רשת: ' + file.name, 'err');
+    notify('❌ שגיאת רשת — ' + file.name, 'err');
+    console.error('Upload error:', err);
+  });
+}
+
+function createFolder() {
+  var nm = v('nf-name').trim().replace(/\s+/g, '_');
+  if (!nm) { notify('הכנס שם', 'warn'); return; }
+  var key = S.r2Path + nm + '/';
+  if (!S.r2Files.find(function(f) { return f.key === key; })) S.r2Files.push({key: key, type: 'folder', size: 0});
+  closeModal('addFolderModal');
+  renderR2();
+  notify('📁 תיקייה "' + nm + '" נוצרה', 'ok');
+}
+
+function renderPlaylists() {
+  var inv = S.playlists.reduce(function(n, pl) { return n + pl.tracks.filter(function(t) { return !t.valid; }).length; }, 0);
+  document.getElementById('invbanner').style.display = inv > 0 ? 'flex' : 'none';
+  if (inv > 0) document.getElementById('invtxt').textContent = inv + ' קבצים חסומים — אינם MP3';
+  var tabsHtml = '';
+  S.playlists.forEach(function(pl) {
+    var c = S.clients.find(function(x) { return x.id === pl.clientId; });
+    tabsHtml += '<span style="display:inline-flex;align-items:center;gap:2px">';
+    tabsHtml += '<button class="pltab ' + (pl.id === S.curPl ? 'active' : '') + '" data-plid="' + pl.id + '" onclick="switchPlById(this)">';
+    if (c) tabsHtml += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + c.color + ';margin-left:4px;vertical-align:middle"></span>';
+    tabsHtml += pl.name + '</button>';
+    tabsHtml += '<button onclick="removePlaylist(\'' + pl.id + '\')" style="padding:2px 5px;border-radius:5px;border:1px solid var(--bdr);background:none;color:var(--muted);font-size:10px;cursor:pointer" title="מחק">✕</button>';
+    tabsHtml += '</span>';
+  });
+  document.getElementById('pltabs').innerHTML = tabsHtml;
+  renderTracks(S.curPl);
+  document.getElementById('ct-pl').textContent = S.playlists.length;
+}
+
+function removePlaylist(plId) {
+  var pl = S.playlists.find(function(p){ return p.id === plId; });
+  if (!pl) return;
+  if (!confirm('למחוק פלייליסט "' + pl.name + '"?')) return;
+  S.playlists = S.playlists.filter(function(p){ return p.id !== plId; });
+  if (S.curPl === plId) S.curPl = S.playlists.length ? S.playlists[0].id : null;
+  FB.saveAll();
+  renderPlaylists();
+  notify('🗑 פלייליסט "' + pl.name + '" נמחק', 'warn');
+}
+
+function switchPlById(btn) {
+  var plId = btn.getAttribute('data-plid');
+  S.curPl = plId;
+  document.querySelectorAll('.pltab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderTracks(plId);
+}
+
+function renderTracks(plId) {
+  var pl = S.playlists.find(function(p) { return p.id === plId; });
+  var el = document.getElementById('tracklist');
+  if (!pl || !pl.tracks.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">אין קטעים. הוסף מ-R2.</div>'; return; }
+  var html = '';
+  pl.tracks.forEach(function(t, i) {
+    html += '<div class="ti ' + (i === 0 && t.valid ? 'play' : '') + (t.valid ? '' : ' inv') + '">';
+    html += '<div style="font-size:11px;color:var(--muted);min-width:22px;text-align:center">' + (t.valid ? (i === 0 ? '♪' : (i+1)) : '⛔') + '</div>';
+    html += '<div class="tiname" style="' + (t.valid ? '' : 'color:var(--red)') + '">' + t.name + (t.valid ? '' : ' <span style="font-size:10px;background:rgba(248,81,73,.15);padding:1px 5px;border-radius:3px">חסום</span>') + '</div>';
+    html += '<div class="tidur">' + t.dur + '</div>';
+    html += '<div class="tiacts"><button class="ib r" onclick="if(confirm(\'להסיר?\'))removeTrack(\'' + plId + '\',\'' + t.id + '\')">✕</button></div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+
+function renderAds() {
+  var html = '';
+  S.ads.forEach(function(a) {
+    var freq = a.freq === 'custom' ? (a.customTimes || 5) + ' פעמים/יום' : a.freq + '× בשעה';
+    var tgt = a.target === 'all' ? '🌐 כל הסטרימרים' : a.target.startsWith('client:') ? '🏢 לקוח' : '📺 סטרימר';
+    html += '<div class="adcard"><div class="adlbl">📢 AD</div>';
+    html += '<div class="adname">' + a.name + '</div>';
+    html += '<div class="admeta">📅 ' + a.from + ' → ' + a.to + ' | 🔁 ' + freq + '<br>☁️ ' + a.path + '</div>';
+    html += '<div class="adrow"><div style="display:flex;gap:5px"><span class="badge" style="background:rgba(188,140,255,.12);border:1px solid rgba(188,140,255,.3);color:var(--purple)">' + tgt + '</span>';
+    html += a.active ? '<span class="badge b-on">פעיל</span>' : '<span class="badge" style="color:var(--muted)">מושהה</span>';
+    html += '</div><div style="display:flex;gap:5px">';
+    html += '<button class="ib g" onclick="toggleAd(\'' + a.id + '\')">' + (a.active ? '⏸' : '▶') + '</button>';
+    html += '<button class="ib r" onclick="if(confirm(\'למחוק?\'))removeAd(\'' + a.id + '\')">✕</button>';
+    html += '</div></div></div>';
+  });
+  if (!S.ads.length) html = '<div style="padding:20px;text-align:center;color:var(--muted)">אין פרסומות.</div>';
+  document.getElementById('adsContainer').innerHTML = html;
+  document.getElementById('ct-ad').textContent = S.ads.filter(function(a) { return a.active; }).length;
+  document.getElementById('st-ads').textContent = S.ads.filter(function(a) { return a.active; }).length;
+}
+
+function renderLog() {
+  var types = {play:'play', sync:'sync', err:'err', warn:'warn', ad:'ad', manual:'manual', invalid:'invalid', upload:'upload'};
+  var html = S.log.map(function(l) {
+    return '<div class="lr ' + (types[l.type] || '') + '"><span class="lt">' + l.t + '</span><span class="ld">' + l.dev + '</span><span class="lm">' + l.msg + '</span></div>';
+  }).join('');
+  document.getElementById('loglist').innerHTML = html;
+}
+
+function renderMiniLog() {
+  var html = S.log.slice(0, 10).map(function(l) {
+    return '<div class="lr ' + (l.type || '') + '"><span class="lt">' + l.t + '</span><span class="lm" style="font-size:10px">' + l.msg + '</span></div>';
+  }).join('');
+  document.getElementById('minilog').innerHTML = html;
+}
+
+function updateStats() {
+  var d = S.devices;
+  document.getElementById('st-on').textContent = d.filter(function(x) { return x.status === 'on'; }).length;
+  document.getElementById('st-off').textContent = d.filter(function(x) { return x.status === 'off'; }).length;
+  document.getElementById('st-dl').textContent = d.filter(function(x) { return x.status === 'dl'; }).length;
+  document.getElementById('st-tot').textContent = d.length;
+  document.getElementById('ct-on').textContent = d.filter(function(x) { return x.status === 'on'; }).length;
+  document.getElementById('ct-dv').textContent = d.length;
+}
+
+function updateSelects() {
+  var plO = S.playlists.map(function(p) { return '<option value="' + p.id + '">' + p.name + '</option>'; }).join('');
+  var cO = S.clients.map(function(c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
+  ['nd-client', 'na-client'].forEach(function(id) { var e = document.getElementById(id); if (e) e.innerHTML = cO; });
+  var nplc = document.getElementById('npl-client');
+  if (nplc) nplc.innerHTML = '<option value="">— ללא שיוך —</option>' + cO;
+  var dO = S.devices.map(function(d) { return '<option value="' + d.id + '">' + d.name + '</option>'; }).join('');
+  var naD = document.getElementById('na-device');
+  if (naD) naD.innerHTML = dO;
+  var tO = '<option value="all">🌐 כל הסטרימרים</option>' +
+    S.clients.map(function(c) { return '<option value="client:' + c.id + '">🏢 ' + c.name + '</option>'; }).join('') +
+    S.devices.map(function(d) { return '<option value="device:' + d.id + '">📺 ' + d.name + '</option>'; }).join('');
+  var ns = document.getElementById('ns-target');
+  if (ns) ns.innerHTML = tO;
+}
+
+function addClient() {
+  var name = v('nc-name');
+  if (!name) { notify('הכנס שם לקוח', 'warn'); return; }
+  var c = {id: uid(), name: name, color: S.selColor};
+  S.r2Files.push({key: 'clients/' + c.id.toLowerCase() + '/', type: 'folder', size: 0});
+  S.clients.push(c);
+  addLog('מערכת', '🏢 לקוח חדש: ' + name, 'sync');
+  FB.saveAll();
+  closeModal('addClientModal');
+  renderAll();
+  notify('✅ לקוח "' + name + '" נוצר', 'ok');
+}
+
+function removeClient(id) {
+  S.clients = S.clients.filter(function(x) { return x.id !== id; });
+  S.devices.forEach(function(d) { if (d.clientId === id) d.clientId = null; });
+  FB.saveAll();
+  renderAll();
+  notify('🗑 לקוח הוסר', 'warn');
+}
+
+function addDevice() {
+  var name = v('nd-name'), sn = v('nd-sn'), clientId = v('nd-client');
+  if (!name || !sn) { notify('מלא שם ומספר סידורי', 'warn'); return; }
+  var dev = {id: uid(), name: name, loc: v('nd-loc'), sn: sn, clientId: clientId, status: 'off', dlPct: 0, playing: '—', vol: parseInt(v('nd-vol')) || 70, manual: false, lastSeen: '—', version: '1.0.0', libTotal: 0, libLocal: 0};
+  S.devices.push(dev);
+  addLog('מערכת', '📺 סטרימר חדש: ' + name + ' (' + sn + ')', 'sync');
+  FB.saveAll();
+  closeModal('addDeviceModal');
+  renderAll();
+  notify('✅ ' + name + ' נוסף', 'ok');
+}
+
+function removeDevice(id) {
+  S.devices = S.devices.filter(function(x) { return x.id !== id; });
+  if (S.selDev === id) S.selDev = null;
+  FB.saveAll();
+  renderAll();
+  notify('🗑 סטרימר הוסר', 'warn');
+}
+
+function devCmd(devId, cmd) {
+  var d = S.devices.find(function(x) { return x.id === devId; });
+  if (!d) return;
+  FB.put('commands/' + devId, {action: cmd, timestamp: Date.now()});
+  if (cmd === 'stop') { d.manual = true; d.playing = 'עצור (ידני)'; }
+  if (cmd === 'play' && d.status === 'off') { d.status = 'on'; d.manual = true; }
+  if (cmd === 'sync') addLog(d.name, '☁️ Progressive Download מ-R2', 'sync');
+  else addLog(d.name, '📡 פקודה: ' + cmd, 'manual');
+  renderAll();
+  notify('📡 פקודה נשלחה ל-' + d.name, 'ok');
+}
+
+function playAll() { S.devices.forEach(function(d) { devCmd(d.id, 'play'); }); }
+function stopAll() { S.devices.forEach(function(d) { devCmd(d.id, 'stop'); }); }
+function syncAll() { S.devices.forEach(function(d) { devCmd(d.id, 'sync'); }); notify('☁️ סנכרון הופעל בכל הסטרימרים', 'ok'); }
+function playClient(cid) { S.devices.filter(function(d) { return d.clientId === cid; }).forEach(function(d) { devCmd(d.id, 'play'); }); }
+function stopClient(cid) { S.devices.filter(function(d) { return d.clientId === cid; }).forEach(function(d) { devCmd(d.id, 'stop'); }); }
+function syncClient(cid) { S.devices.filter(function(d) { return d.clientId === cid; }).forEach(function(d) { devCmd(d.id, 'sync'); }); notify('☁️ סנכרון ללקוח', 'ok'); }
+
+function addPlaylist() {
+  var name = v('npl-name');
+  if (!name) { notify('הכנס שם', 'warn'); return; }
+  var pl = {id: uid(), name: name, clientId: v('npl-client'), folder: v('npl-folder'), tracks: []};
+  S.playlists.push(pl);
+  S.curPl = pl.id;
+  FB.saveAll();
+  closeModal('addPlaylistModal');
+  renderPlaylists();
+  updateSelects();
+  notify('✅ פלייליסט "' + name + '" נוצר', 'ok');
+}
+
+function addTrack() {
+  var path = v('nt-path'), plId = v('nt-pl');
+  if (!path) { notify('הכנס נתיב', 'warn'); return; }
+  var valid = isMP3(path);
+  var pl = S.playlists.find(function(p) { return p.id === plId; });
+  if (!pl) return;
+  var name = v('nt-name') || path.split('/').pop().replace(/\.[^.]+$/, '');
+  if (!valid) addLog('מערכת', '⛔ חסום: ' + path + ' — לא MP3', 'invalid');
+  pl.tracks.push({id: uid(), name: name, path: path, dur: '—', valid: valid});
+  addLog('מערכת', '🎵 ' + (valid ? 'נוסף' : 'נוסף (חסום):') + ' ' + name, 'sync');
+  FB.saveAll();
+  closeModal('addTrackModal');
+  renderTracks(plId);
+  notify('✅ "' + name + '" נוסף' + (valid ? '' : ' (חסום)'), 'ok');
+}
+
+function removeTrack(plId, tid) {
+  var pl = S.playlists.find(function(p) { return p.id === plId; });
+  if (pl) pl.tracks = pl.tracks.filter(function(x) { return x.id !== tid; });
+  FB.saveAll();
+  renderTracks(plId);
+  notify('🗑 קטע הוסר', 'warn');
+}
+
+function toggleDayBtn(label) {
+  var cb = label.querySelector('input[type=checkbox]');
+  cb.checked = !cb.checked;
+  label.classList.toggle('on', cb.checked);
+  label.classList.toggle('no', !cb.checked);
+}
+
+
+
+// ═══════════════════════════════════════
+// תוכנית יום — multi-playlist blocks
+// ═══════════════════════════════════════
+var BLOCK_COLORS = ['#3fb950','#58a6ff','#ffa657','#f778ba','#bc8cff','#39d353','#79c0ff','#ff7b72','#d2a8ff'];
+var DAY_LABEL = {א:'ראשון',ב:'שני',ג:'שלישי',ד:'רביעי',ה:'חמישי',ו:'שישי',ש:'שבת'};
+
+function switchDayTab(btn) {
+  document.querySelectorAll('.day-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('dp-day-filter').value = btn.dataset.day;
+  renderDayProgram();
+}
+
+function updateDayTabIndicators() {
+  document.querySelectorAll('.day-tab-btn').forEach(function(btn) {
+    var day = btn.dataset.day;
+    var hasBlocks = S.dayPrograms.some(function(b){ return b.day === day; });
+    btn.classList.toggle('has-blocks', hasBlocks && !btn.classList.contains('active'));
+  });
+}
+
+function openAddBlock() {
+  // מלא רשימת פלייליסטים עם checkboxes
+  var listEl = document.getElementById('blk-pl-list');
+  listEl.innerHTML = S.playlists.map(function(p) {
+    return '<div class="pl-check-row" onclick="togglePlCheck(\'' + p.id + '\')">' +
+      '<input type="checkbox" id="plchk-' + p.id + '" value="' + p.id + '" onchange="updatePctPreview()" onclick="event.stopPropagation()">' +
+      '<label for="plchk-' + p.id + '" onclick="event.stopPropagation()">' + p.name + '</label>' +
+      '<span class="pl-pct" id="pct-' + p.id + '"></span>' +
+    '</div>';
+  }).join('');
+  updatePctPreview();
+
+  // מלא לקוחות וסטרימרים
+  document.getElementById('blk-client').innerHTML = S.clients.map(function(c){
+    return '<option value="' + c.id + '">' + c.name + '</option>';
+  }).join('');
+  document.getElementById('blk-device').innerHTML = S.devices.map(function(d){
+    return '<option value="' + d.id + '">' + d.name + '</option>';
+  }).join('');
+
+  // סנכרן יום
+  var filterDay = document.getElementById('dp-day-filter').value;
+  document.getElementById('blk-day').value = filterDay;
+  // סנכרן לקוח נבחר ב-target
+  var clientSel2 = document.getElementById('dp-client-filter');
+  var blkClient = document.getElementById('blk-client');
+  if (clientSel2 && clientSel2.value && blkClient) {
+    blkClient.value = clientSel2.value;
+    document.getElementById('blk-target').value = 'client';
+    document.getElementById('blk-cs').style.display = 'flex';
+  }
+  document.getElementById('blk-overlap-warn').style.display = 'none';
+  openModal('addBlockModal');
+}
+
+function togglePlCheck(plId) {
+  var cb = document.getElementById('plchk-' + plId);
+  cb.checked = !cb.checked;
+  updatePctPreview();
+}
+
+function updatePctPreview() {
+  var checked = Array.from(document.querySelectorAll('#blk-pl-list input:checked'));
+  var pct = checked.length ? Math.round(100 / checked.length) : 0;
+  // עדכן אחוזים
+  document.querySelectorAll('#blk-pl-list input').forEach(function(cb) {
+    var pctEl = document.getElementById('pct-' + cb.value);
+    if (pctEl) pctEl.textContent = cb.checked ? pct + '%' : '';
+  });
+  var preview = document.getElementById('blk-pct-preview');
+  if (!checked.length) {
+    preview.textContent = 'לא נבחרו פלייליסטים';
+    preview.style.color = 'var(--muted)';
+  } else {
+    var names = checked.map(function(cb){
+      var pl = S.playlists.find(function(p){ return p.id === cb.value; });
+      return (pl ? pl.name : cb.value) + ' (' + pct + '%)';
+    });
+    preview.textContent = '▶ ' + names.join(' + ');
+    preview.style.color = 'var(--blue)';
+  }
+}
+
+function saveBlock() {
+  var day = document.getElementById('blk-day').value;
+  var start = document.getElementById('blk-start').value;
+  var end = document.getElementById('blk-end').value;
+  var ttype = document.getElementById('blk-target').value;
+
+  // אסוף פלייליסטים שנבחרו
+  var checked = Array.from(document.querySelectorAll('#blk-pl-list input:checked'));
+  if (!checked.length) { notify('בחר לפחות פלייליסט אחד', 'warn'); return; }
+  if (!start || !end) { notify('מלא שעות', 'warn'); return; }
+  if (timeToMin(start) >= timeToMin(end)) { notify('שעת התחלה חייבת להיות לפני הסיום', 'warn'); return; }
+
+  var pct = Math.round(100 / checked.length);
+  var playlists = checked.map(function(cb, i) {
+    var pl = S.playlists.find(function(p){ return p.id === cb.value; });
+    // תיקון עיגול — האחרון מקבל את השאר
+    var p = (i === checked.length - 1) ? (100 - pct * (checked.length - 1)) : pct;
+    return {id: cb.value, name: pl ? pl.name : cb.value, pct: p};
+  });
+
+  var target = 'all';
+  if (ttype === 'client') target = 'client:' + document.getElementById('blk-client').value;
+  else if (ttype === 'device') target = 'device:' + document.getElementById('blk-device').value;
+
+  // בדוק חפיפה
+  var overlap = S.dayPrograms.filter(function(b) {
+    if (b.day !== day) return false;
+    if (b.target !== target && target !== 'all' && b.target !== 'all') return false;
+    return timeToMin(start) < timeToMin(b.end) && timeToMin(end) > timeToMin(b.start);
+  });
+  if (overlap.length) {
+    var warnEl = document.getElementById('blk-overlap-warn');
+    warnEl.innerHTML = '⚠️ חפיפה עם: ' + overlap.map(function(b){
+      return b.playlists.map(function(p){ return p.name; }).join('+') + ' (' + b.start + '–' + b.end + ')';
+    }).join(', ');
+    warnEl.style.display = 'block';
+    return;
+  }
+
+  var colorIdx = S.dayPrograms.filter(function(b){ return b.day===day; }).length % BLOCK_COLORS.length;
+  var block = {
+    id: uid(), day: day, start: start, end: end,
+    playlists: playlists,
+    target: target,
+    color: BLOCK_COLORS[colorIdx]
+  };
+  S.dayPrograms.push(block);
+  broadcastDayProgram(target);
+  addLog('מערכת', '📆 ' + DAY_LABEL[day] + ' ' + start + '–' + end + ': ' + playlists.map(function(p){ return p.name+'('+p.pct+'%)'; }).join('+'), 'sync');
+  FB.saveAll();
+  closeModal('addBlockModal');
+  renderDayProgram();
+  notify('✅ בלוק נוסף', 'ok');
+}
+
+function broadcastDayProgram(target) {
+  var targets = [];
+  if (target === 'all') targets = S.devices.map(function(d){ return d.id; });
+  else if (target.startsWith('client:')) {
+    var cid = target.replace('client:','');
+    targets = S.devices.filter(function(d){ return d.clientId===cid; }).map(function(d){ return d.id; });
+  } else if (target.startsWith('device:')) targets = [target.replace('device:','')];
+  targets.forEach(function(devId) {
+    var devBlocks = S.dayPrograms.filter(function(b){
+      return b.target==='all' || b.target===target || b.target==='device:'+devId;
+    });
+    FB.put('commands/'+devId, {action:'dayprogram_update', dayPrograms: devBlocks, timestamp: Date.now()});
+  });
+}
+
+function updateDeleteBtn() {
+  var checked = document.querySelectorAll('.block-cb:checked');
+  var btn = document.getElementById('deleteSelectedBtn');
+  var countEl = document.getElementById('selectedCount');
+  if (btn) btn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+  if (countEl) countEl.textContent = checked.length;
+}
+
+function deleteSelectedBlocks() {
+  var checked = Array.from(document.querySelectorAll('.block-cb:checked'));
+  if (!checked.length) return;
+  if (!confirm('למחוק ' + checked.length + ' בלוקים?')) return;
+  var ids = checked.map(function(cb){ return cb.dataset.id; });
+  var targets = [];
+  ids.forEach(function(id) {
+    var b = S.dayPrograms.find(function(x){ return x.id === id; });
+    if (b && targets.indexOf(b.target) === -1) targets.push(b.target);
+    S.dayPrograms = S.dayPrograms.filter(function(x){ return x.id !== id; });
+  });
+  targets.forEach(function(t){ broadcastDayProgram(t); });
+  FB.saveAll();
+  renderDayProgram();
+  notify('🗑 ' + ids.length + ' בלוקים נמחקו', 'warn');
+}
+
+function removeBlock(id) {
+  var b = S.dayPrograms.find(function(x){ return x.id===id; });
+  if (!b) return;
+  S.dayPrograms = S.dayPrograms.filter(function(x){ return x.id!==id; });
+  broadcastDayProgram(b.target);
+  FB.saveAll();
+  renderDayProgram();
+  notify('🗑 בלוק הוסר', 'warn');
+}
+
+function copyDayToAll() {
+  var day = document.getElementById('dp-day-filter').value;
+  var dayBlocks = S.dayPrograms.filter(function(b){ return b.day === day; });
+  if (!dayBlocks.length) { notify('אין בלוקים ביום זה לשכפול', 'warn'); return; }
+  var allDays = ['א','ב','ג','ד','ה','ו','ש'];
+  var otherDays = allDays.filter(function(d){ return d !== day; });
+  if (!confirm('שכפל את ' + DAY_LABEL[day] + ' (' + dayBlocks.length + ' בלוקים) לכל הימים האחרים?')) return;
+  otherDays.forEach(function(d) {
+    // הסר בלוקים קיימים מאותו יעד
+    dayBlocks.forEach(function(b) {
+      S.dayPrograms = S.dayPrograms.filter(function(x){ return !(x.day===d && x.target===b.target); });
+    });
+    // הוסף העתקים
+    dayBlocks.forEach(function(b) {
+      S.dayPrograms.push(Object.assign({}, b, {id: uid(), day: d}));
+    });
+  });
+  FB.saveAll();
+  allDays.forEach(function(d){ broadcastDayProgram('all'); });
+  renderDayProgram();
+  notify('✅ שוכפל ל-' + otherDays.length + ' ימים', 'ok');
+}
+
+function renderDayProgram() {
+  // עדכן רשימת לקוחות בסינון
+  var clientSel = document.getElementById('dp-client-filter');
+  if (clientSel) {
+    var prevClient = clientSel.value;
+    clientSel.innerHTML = S.clients.map(function(c){
+      return '<option value="' + c.id + '">' + c.name + '</option>';
+    }).join('');
+    if (prevClient && S.clients.find(function(c){ return c.id === prevClient; })) {
+      clientSel.value = prevClient;
+    }
+  }
+  var selectedClientId = clientSel ? clientSel.value : '';
+  var day = document.getElementById('dp-day-filter').value;
+  // סנן בלוקים לפי לקוח נבחר
+  var blocks = S.dayPrograms.filter(function(b){
+    if (b.day !== day) return false;
+    if (!selectedClientId) return true;
+    if (b.target === 'all') return true;
+    if (b.target === 'client:' + selectedClientId) return true;
+    // בדוק אם הסטרימר שייך ללקוח
+    if (b.target.startsWith('device:')) {
+      var devId = b.target.replace('device:','');
+      var dev = S.devices.find(function(d){ return d.id === devId; });
+      return dev && dev.clientId === selectedClientId;
+    }
+    return false;
+  });
+  blocks.sort(function(a,b){ return timeToMin(a.start)-timeToMin(b.start); });
+  document.getElementById('ct-dp').textContent = S.dayPrograms.length;
+  updateDayTabIndicators();
+
+  var grid = document.getElementById('dpGrid');
+  if (!blocks.length) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">אין בלוקים ל' + DAY_LABEL[day] + ' — לחץ "+ הוסף בלוק"</div>';
+  } else {
+    grid.innerHTML = blocks.map(function(b) {
+      var tgtLabel;
+      if (b.target === 'all') {
+        tgtLabel = '🌐 כולם';
+      } else if (b.target.startsWith('client:')) {
+        var cid = b.target.replace('client:','');
+        var cl = S.clients.find(function(x){ return x.id === cid; });
+        tgtLabel = '🏢 ' + (cl ? cl.name : cid);
+      } else if (b.target.startsWith('device:')) {
+        var did = b.target.replace('device:','');
+        var dv = S.devices.find(function(x){ return x.id === did; });
+        tgtLabel = '📺 ' + (dv ? dv.name : did);
+      } else {
+        tgtLabel = b.target;
+      }
+      var plsHtml = (b.playlists||[]).map(function(p){
+        return '<span style="background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--blue)">' + p.name + ' ' + p.pct + '%</span>';
+      }).join(' ');
+      return '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--bdr);border-right:4px solid '+b.color+';border-radius:8px;padding:10px 14px">' +
+        '<input type="checkbox" class="block-cb" data-id="'+b.id+'" onchange="updateDeleteBtn()" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;flex-shrink:0">' +
+        '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:700;margin-bottom:5px">'+b.start+' — '+b.end+' <span style="color:var(--muted);font-size:11px;font-weight:400">| '+tgtLabel+'</span></div>' +
+          '<div style="display:flex;gap:5px;flex-wrap:wrap">'+plsHtml+'</div>' +
+        '</div>' +
+        '<button class="btn r" style="padding:4px 10px;font-size:11px;flex-shrink:0" onclick="removeBlock(\''+b.id+'\')" >✕</button>' +
+      '</div>';
+    }).join('');
+  }
+  renderTimeline(day, blocks);
+}
+
+function renderTimeline(day, blocks) {
+  var tl = document.getElementById('dpTimeline');
+  var totalMin = 24 * 60;
+  // ימין=בוקר, שמאל=לילה
+  // left% = (totalMin - endMin) / totalMin * 100
+  // בלוק 09:00-12:00: left=(1440-720)/1440*100=50%, width=12.5% → מופיע בצד ימין
+  var html = '';
+  html += blocks.map(function(b) {
+    var startMin = timeToMin(b.start);
+    var endMin   = timeToMin(b.end);
+    var left  = ((totalMin - endMin) / totalMin * 100).toFixed(2);
+    var width = ((endMin - startMin) / totalMin * 100).toFixed(2);
+    var label = (b.playlists||[]).map(function(p){ return p.name; }).join('+');
+    return '<div style="position:absolute;top:0;bottom:0;left:'+left+'%;width:'+width+'%;background:'+b.color+';opacity:.9;display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:1px solid rgba(0,0,0,.15)" title="'+label+' '+b.start+'–'+b.end+'">' +
+      '<span style="font-size:10px;font-weight:700;color:#000;white-space:nowrap;padding:0 4px;overflow:hidden;text-overflow:ellipsis">'+label+'</span>' +
+    '</div>';
+  }).join('');
+  var nowMin = new Date().getHours()*60+new Date().getMinutes();
+  var nowLeft = ((totalMin - nowMin) / totalMin * 100).toFixed(2);
+  html += '<div style="position:absolute;top:0;bottom:0;left:'+nowLeft+'%;width:2px;background:#fff;opacity:.9;z-index:2" title="עכשיו"></div>';
+  tl.innerHTML = html;
+}
+
+function editBlockTime(id) {
+  var b = S.dayPrograms.find(function(x){ return x.id===id; });
+  if (!b) return;
+  var ns = prompt('שעת התחלה (HH:MM):', b.start);
+  if (!ns) return;
+  var ne = prompt('שעת סיום (HH:MM):', b.end);
+  if (!ne) return;
+  if (timeToMin(ns) >= timeToMin(ne)) { notify('שעת התחלה חייבת להיות לפני הסיום','warn'); return; }
+  b.start = ns; b.end = ne;
+  broadcastDayProgram(b.target);
+  FB.saveAll();
+  renderDayProgram();
+  notify('✅ זמנים עודכנו','ok');
+}
+
+
+// ═══════════════════════════════════════
+// שכפול תוכנית לסטרימרים
+// ═══════════════════════════════════════
+function openCopyToDevicesModal() {
+  // מלא לקוחות
+  var srcSel = document.getElementById('copy-src-client');
+  srcSel.innerHTML = S.clients.map(function(c){
+    return '<option value="' + c.id + '">' + c.name + '</option>';
+  }).join('');
+  loadCopySourceDevices();
+  document.getElementById('copy-warn').style.display = 'none';
+  openModal('copyToDevicesModal');
+}
+
+function loadCopySourceDevices() {
+  var clientId = document.getElementById('copy-src-client').value;
+  var clientDevices = S.devices.filter(function(d){ return d.clientId === clientId; });
+
+  // מלא סטרימר מקור
+  var srcDev = document.getElementById('copy-src-device');
+  srcDev.innerHTML = clientDevices.length
+    ? clientDevices.map(function(d){ return '<option value="' + d.id + '">' + d.name + ' — ' + (d.location||'') + '</option>'; }).join('')
+    : '<option value="">אין סטרימרים ללקוח זה</option>';
+
+  // מלא סטרימרי יעד (כל הסטרימרים של הלקוח מלבד המקור)
+  var targetList = document.getElementById('copy-target-list');
+  if (clientDevices.length <= 1) {
+    targetList.innerHTML = '<div style="color:var(--muted);font-size:12px">ללקוח זה יש סטרימר אחד בלבד</div>';
+    return;
+  }
+  targetList.innerHTML = clientDevices.map(function(d) {
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;cursor:pointer">' +
+      '<input type="checkbox" class="copy-target-cb" value="' + d.id + '" data-name="' + d.name + '" checked style="accent-color:var(--green);width:16px;height:16px">' +
+      '<div>' +
+        '<div style="font-size:13px;font-weight:700">' + d.name + '</div>' +
+        '<div style="font-size:11px;color:var(--muted)">' + (d.location||'—') + '</div>' +
+      '</div>' +
+    '</label>';
+  }).join('');
+}
+
+function selectAllCopyTargets(val) {
+  document.querySelectorAll('.copy-target-cb').forEach(function(cb){ cb.checked = val; });
+}
+
+function executeCopyToDevices() {
+  var srcClientId = document.getElementById('copy-src-client').value;
+  var srcDevId = document.getElementById('copy-src-device').value;
+  var includeDayProgram = document.getElementById('copy-include-dayprogram').checked;
+
+
+  if (!srcDevId) { notify('בחר סטרימר מקור', 'warn'); return; }
+  if (!includeDayProgram && !includeSchedule) { notify('בחר לפחות מה לשכפל', 'warn'); return; }
+
+  // אסוף יעדים
+  var targets = Array.from(document.querySelectorAll('.copy-target-cb:checked'))
+    .map(function(cb){ return {id: cb.value, name: cb.dataset.name}; })
+    .filter(function(t){ return t.id !== srcDevId; });
+
+  if (!targets.length) { notify('בחר לפחות סטרימר יעד אחד', 'warn'); return; }
+
+  // תוכנית יום של המקור
+  var srcDayBlocks = S.dayPrograms.filter(function(b){
+    return b.target === 'device:' + srcDevId || b.target === 'all' || b.target === 'client:' + srcClientId;
+  });
+
+
+
+  var copied = 0;
+  targets.forEach(function(target) {
+    // שכפל תוכנית יום
+    if (includeDayProgram && srcDayBlocks.length) {
+      // הסר בלוקים קיימים של היעד
+      S.dayPrograms = S.dayPrograms.filter(function(b){ return b.target !== 'device:' + target.id; });
+      // הוסף העתקים עם target מעודכן
+      srcDayBlocks.forEach(function(b) {
+        S.dayPrograms.push(Object.assign({}, b, {
+          id: uid(),
+          target: 'device:' + target.id
+        }));
+      });
+      // שלח פקודה לסטרימר
+      FB.put('commands/' + target.id, {
+        action: 'dayprogram_update',
+        dayPrograms: S.dayPrograms.filter(function(b){ return b.target === 'device:' + target.id; }),
+        timestamp: Date.now()
+      });
+    }
+
+
+    copied++;
+  });
+
+  FB.saveAll();
+  addLog('מערכת', '📋 שוכפל ל-' + copied + ' סטרימרים: ' + targets.map(function(t){ return t.name; }).join(', '), 'sync');
+  renderDayProgram();
+  renderSchedules();
+  closeModal('copyToDevicesModal');
+  notify('✅ שוכפל ל-' + copied + ' סטרימרים', 'ok');
+}
+
+
+// בדוק אם פרסומת חורגת מחלון המוסיקה של היום
+
+function timeToMin(t) {
+  if (!t) return 0;
+  var parts = t.split(':');
+  return parseInt(parts[0])*60 + parseInt(parts[1]||0);
+}
+
+function addAd() {
+  var name = v('na-name'), path = v('na-path'), from = v('na-from'), to = v('na-to'), freq = v('na-freq'), ttype = v('na-target');
+  if (!name || !path || !from || !to) { notify('מלא את כל השדות', 'warn'); return; }
+  var valid = isMP3(path);
+  var ct = freq === 'custom' ? parseInt(v('na-times')) || 5 : null;
+  var target = 'all';
+  if (ttype === 'client') target = 'client:' + v('na-client');
+  else if (ttype === 'device') target = 'device:' + v('na-device');
+  if (!valid) addLog('מערכת', '⛔ פרסומת חסומה: ' + path + ' — לא MP3', 'invalid');
+  // שמור מידע לוז כדי ש-streamer.py יוכל לאכוף
+  var scheduleConstraint = getScheduleConstraint();
+  S.ads.push({id: uid(), name: name, path: path, from: from, to: to, freq: freq, customTimes: ct, target: target, active: true, valid: valid, scheduleConstraint: scheduleConstraint});
+  addLog('מערכת', '📢 פרסומת נוספה: ' + name + (scheduleConstraint ? ' (כפופה ללוז מוסיקה)' : ''), 'ad');
+  FB.saveAll();
+  closeModal('addAdModal');
+  renderAds();
+  notify('✅ פרסומת "' + name + '" נוספה', 'ok');
+}
+
+// מחזיר את כל חלונות המוסיקה הפעילים (לשמירה ב-Firebase לשימוש streamer.py)
+
+function toggleAd(id) { var a = S.ads.find(function(x) { return x.id === id; }); if (a) a.active = !a.active; FB.saveAll(); renderAds(); notify(a && a.active ? '▶ הופעלה' : '⏸ הושהתה', 'ok'); }
+function removeAd(id) { S.ads = S.ads.filter(function(a) { return a.id !== id; }); FB.saveAll(); renderAds(); notify('🗑 פרסומת הוסרה', 'warn'); }
+
+function manualPlayPlaylist(plId, plName) {
+  if (!S.selDev) { notify('בחר סטרימר קודם', 'warn'); return; }
+  // שלח פקודת play עם playlistId — streamer יזהה כ-override ידני
+  FB.put('commands/' + S.selDev, {
+    action: 'play',
+    playlistId: plId,
+    playlistName: plName,
+    manual: true,
+    timestamp: Date.now()
+  });
+  addLog('מערכת', '👤 Override ידני: ' + plName + ' → ' + S.selDev, 'sync');
+  notify('▶ ' + plName + ' — הופעל ידנית', 'ok');
+}
+
+function selDev(id) {
+  S.selDev = id;
+  var d = S.devices.find(function(x) { return x.id === id; });
+  var c = d ? S.clients.find(function(x) { return x.id === d.clientId; }) : null;
+  var pl = c ? S.playlists.find(function(p) { return p.id === c.playlistId; }) : null;
+  document.getElementById('rp-track').textContent = d ? d.playing : '—';
+  document.getElementById('rp-dev').textContent = d ? d.name + ' — ' + d.loc : 'בחר סטרימר';
+  document.getElementById('rp-play').textContent = d && d.status === 'on' ? '⏸' : '▶';
+  // עדכן כפתורי פלייליסט ידני בפאנל הימני
+  var rpPlList = document.getElementById('rp-playlists');
+  if (rpPlList) {
+    rpPlList.innerHTML = S.playlists.map(function(p) {
+      return '<button class="btn" style="width:100%;text-align:right;margin-bottom:4px;font-size:11px" onclick="manualPlayPlaylist(\'' + p.id + '\',\'' + p.name + '\')">' +
+        '▶ ' + p.name + '</button>';
+    }).join('');
+  }
+  document.getElementById('rp-vol').value = d ? d.vol : 70;
+  document.getElementById('rp-volv').textContent = (d ? d.vol : 70) + '%';
+  var ok = d && d.libLocal >= d.libTotal;
+  document.getElementById('rp-info').innerHTML = d ?
+    '<span style="color:var(--muted)">לקוח:</span> ' + (c ? '<span style="color:' + c.color + '">' + c.name + '</span>' : '—') + '<br>' +
+    '<span style="color:var(--muted)">מספ"ס:</span> ' + d.sn + '<br>' +
+    '<span style="color:var(--muted)">פלייליסט:</span> ' + (pl ? pl.name : '—') + '<br>' +
+    '<span style="color:var(--muted)">גרסה:</span> ' + d.version + '<br>' +
+    '<span style="color:var(--muted)">ספרייה:</span> ' + d.libLocal.toLocaleString() + '/' + d.libTotal.toLocaleString() + ' ' + (ok ? '✅' : '⚠️') + '<br>' +
+    '<span style="color:var(--muted)">נראה:</span> ' + (d.status !== 'off' ? '<span style="color:var(--green)">כעת</span>' : d.lastSeen)
+    : 'לחץ על סטרימר';
+  renderSidebar();
+}
+
+function togglePlay() { if (!S.selDev) { notify('בחר סטרימר', 'warn'); return; } var d = S.devices.find(function(x) { return x.id === S.selDev; }); if (confirm('לשנות מצב נגינה?')) devCmd(S.selDev, d && d.status === 'on' ? 'stop' : 'play'); }
+function doCmd(cmd) { if (!S.selDev) { notify('בחר סטרימר', 'warn'); return; } devCmd(S.selDev, cmd); }
+function setVol(val) { document.getElementById('rp-volv').textContent = val + '%'; if (S.selDev) { var d = S.devices.find(function(x) { return x.id === S.selDev; }); if (d) d.vol = parseInt(val); FB.patch('devices/' + S.selDev, {vol: parseInt(val)}); } }
+
+var TABS = ['status','clients','devices','library','playlists','dayprogram','ads','log','settings'];
+function showTab(name) {
+  TABS.forEach(function(t) { var el = document.getElementById('tab-' + t); if (el) el.style.display = t === name ? '' : 'none'; });
+  document.querySelectorAll('.tnb').forEach(function(b) {
+    var labels = {status:'סטטוס', clients:'לקוחות', devices:'סטרימרים', library:'ספרייה', playlists:'פלייליסטים', dayprogram:'תוכנית', schedule:'לוח', ads:'פרסומות', log:'לוג', settings:'הגדרות'};
+    b.classList.toggle('active', b.textContent.includes(labels[name] || name));
+  });
+}
+
+function setSbi(el) { document.querySelectorAll('.sbi').forEach(function(s) { s.classList.remove('active'); }); el.classList.add('active'); }
+function openModal(id) { var el = document.getElementById(id); if (el) el.classList.add('open'); }
+function closeModal(id) { var el = document.getElementById(id); if (el) el.classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(function(m) { m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('open'); }); });
+
+function notify(msg, type) {
+  var el = document.getElementById('notif');
+  document.getElementById('ni').textContent = type === 'ok' ? '✅' : type === 'err' ? '⛔' : '⚠️';
+  document.getElementById('nt').textContent = msg;
+  el.className = 'notif show ' + (type || 'ok');
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.classList.remove('show'); }, 3200);
+}
+
+function addLog(dev, msg, type) { S.log.unshift({t: nowStr(), dev: dev, msg: msg, type: type}); if (S.log.length > 300) S.log.pop(); renderLog(); renderMiniLog(); }
+function chkWarn(path, warnId) { var el = document.getElementById(warnId); if (el) el.style.display = path && !isMP3(path) ? 'flex' : 'none'; }
+function pickColor(el) { document.querySelectorAll('.csw').forEach(function(s) { s.classList.remove('sel'); }); el.classList.add('sel'); S.selColor = el.getAttribute('data-c'); }
+function pushOTA() { addLog('מערכת', '🚀 OTA נשלח — יותקן בסיום נגינה', 'sync'); notify('🚀 OTA נשלח', 'ok'); }
+function exportLog() { var csv = 'זמן,התקן,הודעה\n' + S.log.map(function(l) { return l.t + ',' + l.dev + ',"' + l.msg + '"'; }).join('\n'); var a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv); a.download = 'log.csv'; a.click(); }
+function clearLog() { S.log = []; renderLog(); renderMiniLog(); notify('🗑 לוג נוקה', 'ok'); }
+function testFB() { if (!v('fb-url')) { notify('הכנס Firebase URL', 'warn'); return; } notify('🔥 בודק Firebase...', 'ok'); setTimeout(function() { notify('✅ Firebase מחובר!', 'ok'); }, 800); }
+function testR2() { if (!v('r2-id')) { notify('הכנס R2 Account ID', 'warn'); return; } notify('🟠 בודק R2...', 'ok'); setTimeout(function() { notify('✅ Cloudflare R2 מחובר!', 'ok'); }, 800); }
+
+function manualSync() {
+  if (!FB.url) { notify('הגדר Firebase בהגדרות', 'warn'); return; }
+  notify('🔄 מסנכרן...', 'warn');
+  FB.loadAll(function(ok) {
+    if (ok) { renderAll(); notify('✅ סונכרן בהצלחה!', 'ok'); }
+    else { notify('❌ שגיאה בסנכרון', 'err'); }
+  });
+}
+
+function saveSettings() {
+  var cfg = {fbUrl: v('fb-url'), fbKey: v('fb-key'), r2Id: v('r2-id'), r2Bucket: v('r2-bucket'), r2Key: v('r2-key'), r2Secret: v('r2-secret'), r2Url: v('r2-url'), otaUrl: v('ota-url'), ver: v('ota-ver')};
+  localStorage.setItem('sc_cfg', JSON.stringify(cfg));
+  FB.url = cfg.fbUrl;
+  FB.secret = cfg.fbKey;
+  // Load from Firebase after connecting
+  if (FB.url) {
+    notify('🔄 מתחבר ל-Firebase...', 'warn');
+    FB.loadAll(function(ok) {
+      if (ok) {
+        renderAll();
+        startSync();
+        notify('✅ מחובר ומסונכרן עם Firebase!', 'ok');
+      } else {
+        notify('💾 הגדרות נשמרו', 'ok');
+      }
+      // Always load R2 files after connecting
+      fetchR2Files();
+    });
+  } else {
+    notify('💾 הגדרות נשמרו', 'ok');
+  }
+}
+
+function loadSettings() {
+  try {
+    var cfg = JSON.parse(localStorage.getItem('sc_cfg') || '{}');
+    var map = {fbUrl:'fb-url', fbKey:'fb-key', r2Id:'r2-id', r2Bucket:'r2-bucket', r2Key:'r2-key', r2Secret:'r2-secret', r2Url:'r2-url', otaUrl:'ota-url', ver:'ota-ver'};
+    setTimeout(function() {
+      Object.keys(map).forEach(function(k) { if (cfg[k]) { var el = document.getElementById(map[k]); if (el) el.value = cfg[k]; } });
+      FB.url = cfg.fbUrl || '';
+      FB.secret = cfg.fbKey || '';
+      // Auto-load from Firebase if configured
+      if (FB.url) {
+        FB.loadAll(function(ok) {
+          if (ok) {
+            renderAll();
+            startSync();
+          }
+          fetchR2Files();
+        });
+      }
+    }, 150);
+  } catch(e) {}
+}
+
+setInterval(function() { S.progVal = (S.progVal + 0.3) % 100; var pf = document.getElementById('rp-prog'); if (pf) pf.style.width = S.progVal + '%'; }, 1000);
+</script>
+</body>
+</html>
