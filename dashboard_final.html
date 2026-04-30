@@ -96,6 +96,15 @@ tbl{width:100%;border-collapse:collapse;font-size:12px}
 .r2fn{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .r2fsz{font-size:10px;color:var(--muted);white-space:nowrap}
 .r2fa{display:flex;gap:4px;opacity:0}.r2f:hover .r2fa{opacity:1}
+.r2preview{position:sticky;bottom:0;background:var(--s2);border-top:2px solid var(--green);border-radius:0 0 10px 10px;padding:10px 14px;display:flex;align-items:center;gap:10px;z-index:10}
+.r2preview.hidden{display:none}
+.r2prev-title{font-size:13px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--green)}
+.r2prev-prog{flex:1;height:5px;background:var(--bdr);border-radius:4px;overflow:hidden;cursor:pointer;min-width:80px;position:relative}
+.r2prev-fill{height:100%;background:var(--green);border-radius:4px;width:0%;transition:width .25s linear}
+.r2prev-time{font-size:11px;color:var(--muted);min-width:75px;text-align:left;direction:ltr}
+.r2prev-btn{width:30px;height:30px;border-radius:50%;background:var(--green);border:none;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.r2prev-btn:hover{filter:brightness(1.2)}
+.r2f.playing{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.3)!important}
 .r2f.selected{background:rgba(249,115,22,.08);border-color:rgba(249,115,22,.35)!important}
 .r2cb{width:16px;height:16px;cursor:pointer;accent-color:var(--orange);flex-shrink:0}
 .r2-sel-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:7px;margin-bottom:6px;font-size:13px}
@@ -297,8 +306,23 @@ input:focus,select:focus{border-color:var(--blue)}input::placeholder{color:var(-
       <button class="btn" onclick="r2ClearSel()" style="padding:3px 10px;font-size:12px;margin-right:auto">ביטול</button>
     </div>
     <div class="r2files" id="r2files"></div>
+    <div class="r2preview hidden" id="r2PreviewBar">
+      <button class="r2prev-btn" id="r2PrevPlayBtn" onclick="r2PreviewToggle()">▶</button>
+      <div style="flex:1;min-width:0">
+        <div class="r2prev-title" id="r2PrevTitle">—</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+          <div class="r2prev-prog" id="r2PrevProg" onclick="r2PreviewSeek(event)">
+            <div class="r2prev-fill" id="r2PrevFill"></div>
+          </div>
+          <span class="r2prev-time" id="r2PrevTime">0:00 / 0:00</span>
+        </div>
+      </div>
+      <input type="range" id="r2PrevVol" min="0" max="100" value="80" oninput="r2PreviewVol(this.value)" style="width:70px;accent-color:var(--green)" title="עוצמת קול">
+      <button class="ib r" onclick="r2PreviewStop()" title="סגור נגן" style="opacity:.7">✕</button>
+    </div>
     <div class="upzone" id="dropzone" onclick="document.getElementById('r2up').click()">
       <input type="file" id="r2up" accept=".mp3" multiple onchange="handleUpload(this.files)">
+      <input type="file" id="r2up-folder" accept=".mp3" multiple webkitdirectory onchange="handleUpload(this.files)">
       <div style="font-size:28px;margin-bottom:8px">🎵</div>
       <div style="font-size:14px;font-weight:700;margin-bottom:4px">גרור קבצי MP3 לכאן</div>
       <div style="font-size:12px;color:var(--muted)">או לחץ לבחירה — רק MP3</div>
@@ -312,8 +336,8 @@ input:focus,select:focus{border-color:var(--blue)}input::placeholder{color:var(-
     <div class="ch">
       <div class="ct2">🎼 פלייליסטים</div>
       <div class="ca">
-        <button class="btn g" onclick="openModal('addTrackModal')">+ הוסף קטע</button>
-        <button class="btn g" onclick="openModal('addPlaylistModal')">+ פלייליסט חדש</button>
+        <button class="btn g" onclick="openAddTrackModal()">+ הוסף קטע</button>
+        <button class="btn g" onclick="openAddPlaylistModal()">+ פלייליסט חדש</button>
       </div>
     </div>
     <div class="infobox">☁️ מנהל מ-R2 | ✅ רק MP3 | 🔀 Shuffle אוטומטי | ⚡ 500 סטרימרים במקביל</div>
@@ -618,21 +642,34 @@ input:focus,select:focus{border-color:var(--blue)}input::placeholder{color:var(-
 </div>
 
 <div class="overlay" id="addTrackModal">
-  <div class="modal">
-    <div class="mtitle">🎵 הוסף קטע</div>
-    <div class="frow"><span class="flbl">נתיב R2</span><input type="text" id="nt-path" placeholder="shared/song.mp3" oninput="chkWarn(this.value,'nt-warn')"/></div>
-    <div id="nt-warn" class="alertbar" style="display:none">⛔ רק MP3!</div>
-    <div class="frow"><span class="flbl">שם תצוגה</span><input type="text" id="nt-name" placeholder="אופציונלי"/></div>
-    <div class="frow"><span class="flbl">פלייליסט</span><select id="nt-pl"></select></div>
-    <div class="macts"><button class="btn" onclick="closeModal('addTrackModal')">ביטול</button><button class="btn g" onclick="addTrack()">✅ הוסף</button></div>
+  <div class="modal" style="width:580px;max-width:95vw">
+    <div class="mtitle">🎵 הוסף קטעים לפלייליסט</div>
+    <div class="frow"><span class="flbl">פלייליסט</span><select id="nt-pl" onchange="renderTrackPicker()"></select></div>
+    <div class="frow" style="flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="flbl">בחר שירים מהספרייה</span>
+        <span style="font-size:11px;color:var(--muted)" id="nt-pick-count">0 נבחרו</span>
+      </div>
+      <input type="text" id="nt-search" placeholder="🔍 חיפוש שיר..." oninput="filterTrackPicker()" style="width:100%;margin-bottom:4px"/>
+      <div style="display:flex;gap:6px;margin-bottom:4px">
+        <button class="btn" style="padding:3px 8px;font-size:11px" onclick="selectAllTracks()">בחר הכל</button>
+        <button class="btn" style="padding:3px 8px;font-size:11px" onclick="clearAllTracks()">נקה הכל</button>
+      </div>
+      <div id="nt-pick-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--bdr);border-radius:7px;padding:4px"></div>
+    </div>
+    <div class="macts"><button class="btn" onclick="closeModal('addTrackModal')">ביטול</button><button class="btn g" onclick="addTracks()">✅ הוסף נבחרים</button></div>
   </div>
 </div>
 
 <div class="overlay" id="addPlaylistModal">
   <div class="modal">
     <div class="mtitle">🎼 פלייליסט חדש</div>
-    <div class="frow"><span class="flbl">שם</span><input type="text" id="npl-name" placeholder="ג׳אז, קלאסי..."/></div>
-    <div class="frow"><span class="flbl">תיקיית R2</span><input type="text" id="npl-folder" placeholder="shared/ או clients/c001/"/></div>
+    <div class="frow"><span class="flbl">שם פלייליסט</span><input type="text" id="npl-name" placeholder="ג׳אז, קלאסי, פופ..."/></div>
+    <div class="frow"><span class="flbl">תיקיית R2</span>
+      <select id="npl-folder">
+        <option value="">— ללא תיקייה —</option>
+      </select>
+    </div>
     <div class="frow"><span class="flbl">לקוח</span><select id="npl-client"><option value="">— ללא שיוך —</option></select></div>
     <div class="macts"><button class="btn" onclick="closeModal('addPlaylistModal')">ביטול</button><button class="btn g" onclick="addPlaylist()">✅ צור</button></div>
   </div>
@@ -1065,7 +1102,7 @@ function renderR2() {
     var selCls = sel ? ' selected' : '';
     var ek = f.key.replace(/'/g, "\\'");
     if (f.type === 'folder') {
-      var nm = f.key.replace(path, '').replace(/\/$/, '');
+      var nm = decodeURIComponent(f.key.replace(path, '').replace(/\/$/, ''));
       var cnt = S.r2Files.filter(function(x) { return x.key.startsWith(f.key) && x.type === 'file'; }).length;
       html += '<div class="r2f folder' + selCls + '">';
       html += '<input type="checkbox" class="r2cb" ' + (sel ? 'checked' : '') + ' onclick="event.stopPropagation();r2ToggleSel(\'' + ek + '\',this.checked)">';
@@ -1075,16 +1112,17 @@ function renderR2() {
       html += '<div class="r2fa"><button class="ib r" onclick="event.stopPropagation();r2DeleteFolder(\'' + ek + '\',' + cnt + ')">🗑</button></div>';
       html += '</div>';
     } else {
-      var nm2 = f.key.split('/').pop();
+      var nm2 = decodeURIComponent(f.key.split('/').pop());
       var valid = isMP3(nm2);
       html += '<div class="r2f' + selCls + '">';
-      html += '<input type="checkbox" class="r2cb" ' + (sel ? 'checked' : '') + ' onclick="r2ToggleSel(\'' + ek + '\',this.checked)">';
+      var idx2 = S.r2Files.indexOf(f);
+      html += '<input type="checkbox" class="r2cb" ' + (sel ? 'checked' : '') + ' onclick="event.stopPropagation();r2ToggleSel(\'' + ek + '\',this.checked)">';
       html += '<span style="font-size:15px">' + (valid ? '🎵' : '⛔') + '</span>';
       html += '<div class="r2fn" style="' + (valid ? '' : 'color:var(--red)') + '">' + nm2 + (valid ? '' : ' <span style="font-size:10px;background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.3);border-radius:3px;padding:1px 5px">לא MP3</span>') + '</div>';
       html += '<div class="r2fsz">' + fmt(f.size) + '</div>';
       html += '<div class="r2fa">';
-      html += '<button class="ib" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + ek + '\');notify(\'📋 הועתק\',\'ok\')">📋</button>';
-      html += '<button class="ib r" onclick="if(confirm(\'למחוק?\'))r2Delete(\'' + ek + '\')">🗑</button>';
+      if (valid) html += '<button class="ib" data-key="' + ek + '" data-name="' + nm2.replace(/'/g,"\\'") + '" onclick="event.stopPropagation();r2PreviewPlay(this.dataset.key,this.dataset.name)" title="האזן לתצוגה מקדימה">▶</button>';
+      html += '<button class="ib" data-idx="' + idx2 + '" onclick="event.stopPropagation();var k=S.r2Files[this.dataset.idx].key;navigator.clipboard&&navigator.clipboard.writeText(k);notify(\'📋 הועתק\',\'ok\')">📋</button>';
       html += '</div></div>';
     }
   });
@@ -1092,6 +1130,97 @@ function renderR2() {
   document.getElementById('r2files').innerHTML = html;
   r2UpdateSelBar();
 }
+
+// ===== R2 Preview Player =====
+var _r2Audio = null;
+var _r2PreviewKey = null;
+
+function r2PreviewPlay(key, name) {
+  // המפתחות מ-R2 כבר מכילים %20 — פשוט משתמשים ישירות
+  var url = R2_PUBLIC_URL + '/' + key;
+
+  // אם אותו שיר — toggle
+  if (_r2PreviewKey === key && _r2Audio) {
+    r2PreviewToggle();
+    return;
+  }
+
+  // עצור ישן
+  if (_r2Audio) { _r2Audio.pause(); _r2Audio = null; }
+
+  _r2PreviewKey = key;
+  document.getElementById('r2PrevTitle').textContent = name;
+  document.getElementById('r2PreviewBar').classList.remove('hidden');
+  document.getElementById('r2PrevPlayBtn').textContent = '⏸';
+  document.getElementById('r2PrevFill').style.width = '0%';
+  document.getElementById('r2PrevTime').textContent = '0:00 / 0:00';
+
+  // הדגש שורה
+  document.querySelectorAll('#r2files .r2f').forEach(function(row){row.classList.remove('playing');});
+  document.querySelectorAll('#r2files .r2f').forEach(function(row){
+    var btn = row.querySelector('.ib[data-key]');
+    if (btn && btn.dataset.key === key) row.classList.add('playing');
+  });
+
+  _r2Audio = new Audio();
+  _r2Audio.src = url;
+  _r2Audio.volume = (document.getElementById('r2PrevVol').value || 80) / 100;
+  _r2Audio.play().catch(function(e){ notify('❌ שגיאה בנגינה: ' + e.message, 'err'); r2PreviewStop(); });
+
+  _r2Audio.ontimeupdate = function() {
+    if (!_r2Audio || !_r2Audio.duration) return;
+    var pct = (_r2Audio.currentTime / _r2Audio.duration) * 100;
+    document.getElementById('r2PrevFill').style.width = pct + '%';
+    document.getElementById('r2PrevTime').textContent = fmtTime(_r2Audio.currentTime) + ' / ' + fmtTime(_r2Audio.duration);
+  };
+  _r2Audio.onended = function() {
+    document.getElementById('r2PrevPlayBtn').textContent = '▶';
+    document.getElementById('r2PrevFill').style.width = '100%';
+    document.querySelectorAll('#r2files .r2f').forEach(function(row){row.classList.remove('playing');});
+  };
+  _r2Audio.onerror = function() {
+    notify('❌ לא ניתן לנגן את הקובץ', 'err');
+    r2PreviewStop();
+  };
+}
+
+function r2PreviewToggle() {
+  if (!_r2Audio) return;
+  if (_r2Audio.paused) {
+    _r2Audio.play();
+    document.getElementById('r2PrevPlayBtn').textContent = '⏸';
+  } else {
+    _r2Audio.pause();
+    document.getElementById('r2PrevPlayBtn').textContent = '▶';
+  }
+}
+
+function r2PreviewStop() {
+  if (_r2Audio) { _r2Audio.pause(); _r2Audio = null; }
+  _r2PreviewKey = null;
+  document.getElementById('r2PreviewBar').classList.add('hidden');
+  document.getElementById('r2PrevPlayBtn').textContent = '▶';
+  document.querySelectorAll('#r2files .r2f').forEach(function(row){row.classList.remove('playing');});
+}
+
+function r2PreviewSeek(e) {
+  if (!_r2Audio || !_r2Audio.duration) return;
+  var bar = document.getElementById('r2PrevProg');
+  var rect = bar.getBoundingClientRect();
+  var pct = (e.clientX - rect.left) / rect.width;
+  _r2Audio.currentTime = pct * _r2Audio.duration;
+}
+
+function r2PreviewVol(v) {
+  if (_r2Audio) _r2Audio.volume = v / 100;
+}
+
+function fmtTime(sec) {
+  if (!sec || isNaN(sec)) return '0:00';
+  var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+// ===== end R2 Preview Player =====
 
 function r2ToggleSel(key, checked) {
   if (!S.r2Sel) S.r2Sel = {};
@@ -1131,7 +1260,8 @@ function r2DeleteFolder(key, cnt) {
     return;
   }
   toDelete.forEach(function(f) {
-    fetch(R2_WORKER_URL + '/' + f.key, {
+    var dk = f.key.split('/').map(function(p) { try { return decodeURIComponent(p); } catch(e) { return p; } }).join('/');
+    fetch(R2_WORKER_URL + '/' + dk.split('/').map(encodeURIComponent).join('/'), {
       method: 'DELETE',
       headers: { 'X-Auth-Token': 'StreamControl2025' }
     }).then(function() {
@@ -1157,28 +1287,59 @@ function r2DeleteSelected() {
     else totalFiles++;
   });
   if (!confirm('למחוק ' + keys.length + ' פריטים (' + totalFiles + ' קבצים)?')) return;
+  var done = 0;
+  var fileKeys = [];
   keys.forEach(function(k) {
     var isFolder = S.r2Files.some(function(f) { return f.key === k && f.type === 'folder'; });
-    if (isFolder) S.r2Files = S.r2Files.filter(function(f) { return !f.key.startsWith(k); });
-    else S.r2Files = S.r2Files.filter(function(f) { return f.key !== k; });
+    if (isFolder) {
+      S.r2Files.filter(function(f) { return f.key.startsWith(k) && f.type === 'file'; }).forEach(function(f) { fileKeys.push(f.key); });
+    } else {
+      fileKeys.push(k);
+    }
   });
-  S.r2Sel = {};
-  renderR2();
-  addLog('R2', '🗑 נמחקו ' + keys.length + ' פריטים', 'upload');
-  notify('🗑 נמחקו ' + keys.length + ' פריטים', 'ok');
+  if (!fileKeys.length) {
+    S.r2Sel = {};
+    renderR2();
+    return;
+  }
+  fileKeys.forEach(function(key) {
+    var decodedKey = key.split('/').map(function(p) { try { return decodeURIComponent(p); } catch(e) { return p; } }).join('/');
+    fetch(R2_WORKER_URL + '/' + decodedKey.split('/').map(encodeURIComponent).join('/'), {
+      method: 'DELETE',
+      headers: { 'X-Auth-Token': 'StreamControl2025' }
+    }).then(function() {
+      done++;
+      S.r2Files = S.r2Files.filter(function(f) { return f.key !== key; });
+      if (done === fileKeys.length) {
+        S.r2Sel = {};
+        renderR2();
+        addLog('R2', '🗑 נמחקו ' + done + ' קבצים', 'upload');
+        notify('🗑 נמחקו ' + done + ' קבצים', 'ok');
+      }
+    }).catch(function() {
+      done++;
+      if (done === fileKeys.length) {
+        S.r2Sel = {};
+        renderR2();
+        notify('⚠️ חלק מהמחיקות נכשלו', 'warn');
+      }
+    });
+  });
 }
 
 function r2Go(p) { S.r2Path = p; S.r2Sel = {}; renderR2(); }
 function r2Up() { var parts = S.r2Path.split('/').filter(Boolean); parts.pop(); S.r2Path = parts.length ? parts.join('/') + '/' : ''; S.r2Sel = {}; renderR2(); }
 function r2Delete(key) {
-  fetch(R2_WORKER_URL + '/' + key, {
+  // Decode first (in case it came encoded from R2), then let browser re-encode
+  var decodedKey = key.split('/').map(function(p) { try { return decodeURIComponent(p); } catch(e) { return p; } }).join('/');
+  fetch(R2_WORKER_URL + '/' + decodedKey.split('/').map(encodeURIComponent).join('/'), {
     method: 'DELETE',
     headers: { 'X-Auth-Token': 'StreamControl2025' }
   }).then(function() {
     S.r2Files = S.r2Files.filter(function(f) { return f.key !== key; });
     if (S.r2Sel) delete S.r2Sel[key];
     renderR2();
-    addLog('R2', '🗑 נמחק: ' + key.split('/').pop(), 'upload');
+    addLog('R2', '🗑 נמחק: ' + decodeURIComponent(key.split('/').pop()), 'upload');
     notify('🗑 קובץ נמחק', 'ok');
   }).catch(function() {
     notify('❌ שגיאה במחיקה', 'err');
@@ -1225,20 +1386,92 @@ function fetchR2Files(cb) {
 }
 
 function handleUpload(files) {
-  var invalid = Array.from(files).filter(function(f) { return !f.name.toLowerCase().endsWith('.mp3'); });
-  var valid = Array.from(files).filter(function(f) { return f.name.toLowerCase().endsWith('.mp3'); });
-  if (invalid.length) {
-    invalid.forEach(function(f) { addLog('R2', '⛔ חסום: ' + f.name + ' — לא MP3', 'invalid'); });
-    notify('⛔ ' + invalid.length + ' קבצים נחסמו — לא MP3', 'err');
+  var fileArr = Array.from(files);
+  var invalid = fileArr.filter(function(f) { return !f.name.toLowerCase().endsWith('.mp3'); });
+  var valid = fileArr.filter(function(f) { return f.name.toLowerCase().endsWith('.mp3'); });
+
+  if (invalid.length) notify('⛔ ' + invalid.length + ' קבצים לא MP3 דולגו', 'warn');
+  if (!valid.length) return;
+
+  // Detect if this is a folder upload (files have webkitRelativePath)
+  var isFolder = valid.length > 1 && valid[0].webkitRelativePath && valid[0].webkitRelativePath.includes('/');
+  var folderName = '';
+  if (isFolder) {
+    folderName = valid[0].webkitRelativePath.split('/')[0];
   }
-  valid.forEach(function(f) { uploadFile(f); });
+
+  var prefix = S.r2Path ? S.r2Path : (folderName ? folderName + '/' : '');
+  var total = valid.length, done = 0, failed = 0;
+  var uploadedKeys = [];
+
+  notify('⬆️ מעלה ' + total + ' קבצים...', 'ok');
+
+  valid.forEach(function(file) {
+    var key = prefix + file.name;
+    fetch(R2_WORKER_URL + '/' + encodeURIComponent(key).replace(/%2F/g, '/'), {
+      method: 'PUT',
+      headers: { 'X-Auth-Token': 'StreamControl2025', 'Content-Type': 'audio/mpeg' },
+      body: file
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      done++;
+      uploadedKeys.push(key);
+      // Add to r2Files if not exists
+      if (!S.r2Files.find(function(f) { return f.key === key; })) {
+        S.r2Files.push({key: key, type: 'file', size: file.size, url: data.url || (R2_PUBLIC_URL + '/' + key)});
+      }
+      // Add folder entry if needed
+      if (prefix && !S.r2Files.find(function(f) { return f.key === prefix; })) {
+        S.r2Files.unshift({key: prefix, type: 'folder', size: 0});
+      }
+      addLog('R2', '⬆️ הועלה: ' + file.name, 'upload');
+      if (done + failed === total) {
+        renderR2();
+        notify('✅ ' + done + ' קבצים הועלו בהצלחה', 'ok');
+        // If folder upload - offer to create playlist automatically
+        if (isFolder && done > 0) {
+          setTimeout(function() {
+            if (confirm('📁 נוצרה תיקייה "' + folderName + '" עם ' + done + ' שירים.\nליצור פלייליסט אוטומטית עם כל השירים?')) {
+              createPlaylistFromFolder(folderName, prefix, uploadedKeys);
+            }
+          }, 500);
+        }
+      }
+    }).catch(function() {
+      failed++;
+      addLog('R2', '❌ שגיאה: ' + file.name, 'invalid');
+      if (done + failed === total) {
+        renderR2();
+        notify('⚠️ ' + done + ' הועלו, ' + failed + ' נכשלו', 'warn');
+      }
+    });
+  });
+}
+
+function createPlaylistFromFolder(folderName, prefix, keys) {
+  var pl = {
+    id: uid(),
+    name: folderName,
+    clientId: '',
+    folder: prefix,
+    tracks: keys.map(function(key) {
+      var name = decodeURIComponent(key.split('/').pop().replace(/\.mp3$/i, ''));
+      return {id: uid(), name: name, path: key, dur: '—', valid: true};
+    })
+  };
+  S.playlists.push(pl);
+  S.curPl = pl.id;
+  FB.saveAll();
+  showTab('playlists');
+  renderPlaylists();
+  updateSelects();
+  notify('🎼 פלייליסט "' + folderName + '" נוצר עם ' + pl.tracks.length + ' שירים!', 'ok');
 }
 
 var R2_WORKER_URL = 'https://streamcontrol-r2.erez-musicpro.workers.dev';
-var R2_PUBLIC_URL = 'https://pub-5dd0126225ae4eaf98d001530cf45f93.r2.dev';
+var R2_PUBLIC_URL = 'https://pub-b26d98b0f79143c6a838fc8d8f4199bb.r2.dev';
 
 function uploadFile(file) {
-  var key = (S.r2Path || 'music/') + file.name;
+  var key = (S.r2Path ? S.r2Path : '') + file.name;
   var id = 'up' + uid();
   var cont = document.getElementById('upprogContainer');
   cont.insertAdjacentHTML('beforeend',
@@ -1303,10 +1536,100 @@ function createFolder() {
   var nm = v('nf-name').trim().replace(/\s+/g, '_');
   if (!nm) { notify('הכנס שם', 'warn'); return; }
   var key = S.r2Path + nm + '/';
-  if (!S.r2Files.find(function(f) { return f.key === key; })) S.r2Files.push({key: key, type: 'folder', size: 0});
-  closeModal('addFolderModal');
-  renderR2();
-  notify('📁 תיקייה "' + nm + '" נוצרה', 'ok');
+  // Create folder by uploading a tiny placeholder file
+  var placeholder = new Blob([''], {type: 'audio/mpeg'});
+  fetch(R2_WORKER_URL + '/' + key + '.keep', {
+    method: 'PUT',
+    headers: { 'X-Auth-Token': 'StreamControl2025', 'Content-Type': 'audio/mpeg' },
+    body: placeholder
+  }).then(function() {
+    if (!S.r2Files.find(function(f) { return f.key === key; })) {
+      S.r2Files.push({key: key, type: 'folder', size: 0});
+    }
+    closeModal('addFolderModal');
+    renderR2();
+    notify('📁 תיקייה "' + nm + '" נוצרה', 'ok');
+  }).catch(function() {
+    if (!S.r2Files.find(function(f) { return f.key === key; })) {
+      S.r2Files.push({key: key, type: 'folder', size: 0});
+    }
+    closeModal('addFolderModal');
+    renderR2();
+    notify('📁 תיקייה "' + nm + '" נוצרה', 'ok');
+  });
+}
+
+function renderTrackPicker() {
+  filterTrackPicker();
+}
+
+function filterTrackPicker() {
+  var search = (document.getElementById('nt-search').value || '').toLowerCase();
+  var plId = document.getElementById('nt-pl').value;
+  var pl = S.playlists.find(function(p) { return p.id === plId; });
+  var existing = pl ? pl.tracks.map(function(t) { return t.path; }) : [];
+  var mp3s = S.r2Files.filter(function(f) { return f.type === 'file' && isMP3(f.key); });
+  if (search) mp3s = mp3s.filter(function(f) { return f.key.toLowerCase().includes(search); });
+  var html = '';
+  mp3s.forEach(function(f) {
+    var nm = decodeURIComponent(f.key.split('/').pop().replace(/\.mp3$/i, ''));
+    var inPl = existing.indexOf(f.key) !== -1;
+    var ek = f.key.replace(/"/g, '&quot;');
+    html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;' + (inPl ? 'opacity:0.4;' : '') + '">';
+    html += '<input type="checkbox" class="r2cb" value="' + ek + '" ' + (inPl ? 'disabled checked' : '') + ' onchange="updatePickCount()">';
+    html += '<span style="font-size:13px">' + nm + '</span>';
+    if (inPl) html += '<span style="font-size:10px;color:var(--muted);margin-right:auto">כבר בפלייליסט</span>';
+    html += '</label>';
+  });
+  if (!html) html = '<div style="padding:12px;text-align:center;color:var(--muted)">אין קבצים בספרייה</div>';
+  document.getElementById('nt-pick-list').innerHTML = html;
+  updatePickCount();
+}
+
+function updatePickCount() {
+  var checked = document.querySelectorAll('#nt-pick-list input[type=checkbox]:checked:not(:disabled)');
+  document.getElementById('nt-pick-count').textContent = checked.length + ' נבחרו';
+}
+
+function selectAllTracks() {
+  var boxes = document.querySelectorAll('#nt-pick-list input[type=checkbox]:not(:disabled)');
+  boxes.forEach(function(b) { b.checked = true; });
+  updatePickCount();
+}
+
+function clearAllTracks() {
+  var boxes = document.querySelectorAll('#nt-pick-list input[type=checkbox]:not(:disabled)');
+  boxes.forEach(function(b) { b.checked = false; });
+  updatePickCount();
+}
+
+function openAddTrackModal() {
+  // Populate playlist dropdown
+  var plSel = document.getElementById('nt-pl');
+  plSel.innerHTML = '';
+  S.playlists.forEach(function(pl) {
+    var opt = document.createElement('option');
+    opt.value = pl.id;
+    opt.textContent = pl.name;
+    plSel.appendChild(opt);
+  });
+  // Default to current playlist
+  if (S.curPl) plSel.value = S.curPl;
+  document.getElementById('nt-search').value = '';
+  renderTrackPicker();
+  openModal('addTrackModal');
+}
+
+function openAddPlaylistModal() {
+  // populate folder dropdown with existing R2 folders
+  var sel = document.getElementById('npl-folder');
+  sel.innerHTML = '<option value="">— ללא תיקייה —</option>';
+  var folders = S.r2Files.filter(function(f) { return f.type === 'folder'; });
+  folders.forEach(function(f) {
+    sel.innerHTML += '<option value="' + f.key + '">' + f.key + '</option>';
+  });
+  document.getElementById('npl-name').value = '';
+  openModal('addPlaylistModal');
 }
 
 function renderPlaylists() {
@@ -1499,20 +1822,26 @@ function addPlaylist() {
   notify('✅ פלייליסט "' + name + '" נוצר', 'ok');
 }
 
-function addTrack() {
-  var path = v('nt-path'), plId = v('nt-pl');
-  if (!path) { notify('הכנס נתיב', 'warn'); return; }
-  var valid = isMP3(path);
+function addTrack() { addTracks(); }
+
+function addTracks() {
+  var plId = document.getElementById('nt-pl').value;
+  if (!plId) { notify('בחר פלייליסט', 'warn'); return; }
   var pl = S.playlists.find(function(p) { return p.id === plId; });
   if (!pl) return;
-  var name = v('nt-name') || path.split('/').pop().replace(/\.[^.]+$/, '');
-  if (!valid) addLog('מערכת', '⛔ חסום: ' + path + ' — לא MP3', 'invalid');
-  pl.tracks.push({id: uid(), name: name, path: path, dur: '—', valid: valid});
-  addLog('מערכת', '🎵 ' + (valid ? 'נוסף' : 'נוסף (חסום):') + ' ' + name, 'sync');
+  var checked = document.querySelectorAll('#nt-pick-list input[type=checkbox]:checked:not(:disabled)');
+  if (!checked.length) { notify('בחר לפחות שיר אחד', 'warn'); return; }
+  var added = 0;
+  checked.forEach(function(cb) {
+    var path = cb.value;
+    var name = decodeURIComponent(path.split('/').pop().replace(/\.mp3$/i, ''));
+    pl.tracks.push({id: uid(), name: name, path: path, dur: '—', valid: true});
+    added++;
+  });
   FB.saveAll();
   closeModal('addTrackModal');
   renderTracks(plId);
-  notify('✅ "' + name + '" נוסף' + (valid ? '' : ' (חסום)'), 'ok');
+  notify('✅ נוספו ' + added + ' קטעים', 'ok');
 }
 
 function removeTrack(plId, tid) {
@@ -2078,6 +2407,7 @@ function saveSettings() {
   localStorage.setItem('sc_cfg', JSON.stringify(cfg));
   FB.url = cfg.fbUrl;
   FB.secret = cfg.fbKey;
+  if (cfg.r2Url) R2_PUBLIC_URL = cfg.r2Url.replace(/\/$/, '');
   // Load from Firebase after connecting
   if (FB.url) {
     notify('🔄 מתחבר ל-Firebase...', 'warn');
@@ -2105,6 +2435,7 @@ function loadSettings() {
       Object.keys(map).forEach(function(k) { if (cfg[k]) { var el = document.getElementById(map[k]); if (el) el.value = cfg[k]; } });
       FB.url = cfg.fbUrl || '';
       FB.secret = cfg.fbKey || '';
+      if (cfg.r2Url) R2_PUBLIC_URL = cfg.r2Url.replace(/\/$/, '');
       // Auto-load from Firebase if configured
       if (FB.url) {
         FB.loadAll(function(ok) {
