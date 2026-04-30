@@ -1121,7 +1121,7 @@ function renderR2() {
       html += '<div class="r2fn" style="' + (valid ? '' : 'color:var(--red)') + '">' + nm2 + (valid ? '' : ' <span style="font-size:10px;background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.3);border-radius:3px;padding:1px 5px">לא MP3</span>') + '</div>';
       html += '<div class="r2fsz">' + fmt(f.size) + '</div>';
       html += '<div class="r2fa">';
-      if (valid) html += '<button class="ib" data-key="' + ek + '" data-name="' + nm2.replace(/'/g,"\\'") + '" onclick="event.stopPropagation();r2PreviewPlay(this.dataset.key,this.dataset.name)" title="האזן לתצוגה מקדימה">▶</button>';
+      if (valid) html += '<button class="ib" data-url="' + R2_PUBLIC_URL + '/' + ek + '" data-name="' + nm2.replace(/"/g,'&quot;') + '" onclick="event.stopPropagation();r2PreviewPlay(this.dataset.url,this.dataset.name)" title="האזן לתצוגה מקדימה">▶</button>';
       html += '<button class="ib" data-idx="' + idx2 + '" onclick="event.stopPropagation();var k=S.r2Files[this.dataset.idx].key;navigator.clipboard&&navigator.clipboard.writeText(k);notify(\'📋 הועתק\',\'ok\')">📋</button>';
       html += '</div></div>';
     }
@@ -1135,12 +1135,10 @@ function renderR2() {
 var _r2Audio = null;
 var _r2PreviewKey = null;
 
-function r2PreviewPlay(key, name) {
-  // המפתחות מ-R2 כבר מכילים %20 — פשוט משתמשים ישירות
-  var url = R2_PUBLIC_URL + '/' + key;
+function r2PreviewPlay(url, name) {
 
   // אם אותו שיר — toggle
-  if (_r2PreviewKey === key && _r2Audio) {
+  if (_r2PreviewKey === url && _r2Audio) {
     r2PreviewToggle();
     return;
   }
@@ -1148,7 +1146,7 @@ function r2PreviewPlay(key, name) {
   // עצור ישן
   if (_r2Audio) { _r2Audio.pause(); _r2Audio = null; }
 
-  _r2PreviewKey = key;
+  _r2PreviewKey = url;
   document.getElementById('r2PrevTitle').textContent = name;
   document.getElementById('r2PreviewBar').classList.remove('hidden');
   document.getElementById('r2PrevPlayBtn').textContent = '⏸';
@@ -1158,8 +1156,8 @@ function r2PreviewPlay(key, name) {
   // הדגש שורה
   document.querySelectorAll('#r2files .r2f').forEach(function(row){row.classList.remove('playing');});
   document.querySelectorAll('#r2files .r2f').forEach(function(row){
-    var btn = row.querySelector('.ib[data-key]');
-    if (btn && btn.dataset.key === key) row.classList.add('playing');
+    var btn = row.querySelector('.ib[data-url]');
+    if (btn && btn.dataset.url === url) row.classList.add('playing');
   });
 
   _r2Audio = new Audio();
